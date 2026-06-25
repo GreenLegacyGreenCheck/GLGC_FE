@@ -1,7 +1,7 @@
 <div align="center">
 
 # 그린체크 (GreenCheck)
-
+고지서 한 장에서 시작하는, 소상공인·가구·기후 취약계층을 위한 통합 기후·에너지 자가진단 플랫폼
 </div>
 
 <br/>
@@ -14,11 +14,9 @@
 
 <br>
 
-<!-- repobeats 인사이트 추가하기: https://repobeats.axiom.co 에서 이 repo로 임베드를 생성한 뒤 아래 주석을 이미지로 교체 -->
-
 ## 📊 Insights
 
-<!-- ![Analytics](https://repobeats.axiom.co/api/embed/__REPLACE_ME__.svg "Repobeats analytics image") -->
+![Analytics](https://repobeats.axiom.co/api/embed/1ac546957d148f8e7e910a7fe0afdd01975ea02d.svg "Repobeats analytics image")
 
 ## 📚 서비스 소개
 
