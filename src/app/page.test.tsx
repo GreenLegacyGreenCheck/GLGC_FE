@@ -11,7 +11,7 @@ describe("Home", () => {
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "지금 시작하기" }),
+      screen.getByRole("link", { name: "지금 시작하기" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "사용 방법" }),
