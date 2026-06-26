@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { DiagnosisProvider } from "@/context/diagnosis-context";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -19,7 +20,7 @@ export default function RootLayout({
             className="relative mx-auto min-h-screen w-full max-w-[430px] overflow-hidden bg-[#eef7f2] shadow-2xl shadow-emerald-950/25 sm:h-[920px] sm:min-h-0 sm:rounded-[44px] sm:ring-2 sm:ring-emerald-950/15"
             data-phone-frame
           >
-            {children}
+            <DiagnosisProvider>{children}</DiagnosisProvider>
           </div>
         </main>
       </body>

@@ -1,7 +1,7 @@
 const tabs = [
   { icon: "⌂", label: "홈", href: "/" },
   { icon: "▤", label: "진단 리포트", href: "/upload" },
-  { icon: "♙", label: "마이페이지", href: "#" },
+  { icon: "♙", label: "마이페이지", href: "/login" },
 ];
 
 type BottomNavigationProps = {

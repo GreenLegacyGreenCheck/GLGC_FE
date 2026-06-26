@@ -1,9 +1,29 @@
 "use client";
 
 import BottomNavigation from "@/components/BottomNavigation";
+import { useDiagnosis } from "@/context/diagnosis-context";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import Script from "next/script";
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+
+type DaumPostcodeData = {
+  roadAddress: string;
+  jibunAddress: string;
+  zonecode: string;
+};
+
+declare global {
+  interface Window {
+    daum?: {
+      Postcode: new (options: {
+        oncomplete: (data: DaumPostcodeData) => void;
+        onclose?: () => void;
+      }) => { embed: (element: HTMLElement) => void };
+    };
+  }
+}
 
 function ChevronLeftIcon() {
   return (
@@ -66,6 +86,7 @@ type BillUploadBoxProps = {
   badgeClassName: string;
   cta: string;
   compact?: boolean;
+  onFileSelected: (file: File | null) => void;
 };
 
 type UploadPreview = {
@@ -98,6 +119,7 @@ function BillUploadBox({
   badgeClassName,
   cta,
   compact = false,
+  onFileSelected,
 }: BillUploadBoxProps) {
   const headingId = `${title.replace(/\s/g, "-")}-upload`;
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -155,6 +177,7 @@ function BillUploadBox({
       fileName: file.name,
       url: URL.createObjectURL(file),
     });
+    onFileSelected(file);
     setIsOptionOpen(false);
   };
 
@@ -238,10 +261,13 @@ function BillUploadBox({
         URL.revokeObjectURL(preview.url);
       }
 
+      const fileName = `${title} 촬영 이미지.jpg`;
+
       setPreview({
-        fileName: `${title} 촬영 이미지.jpg`,
+        fileName,
         url: URL.createObjectURL(blob),
       });
+      onFileSelected(new File([blob], fileName, { type: "image/jpeg" }));
       closeCamera();
     }, "image/jpeg");
   };
@@ -484,7 +510,115 @@ function BillUploadBox({
   );
 }
 
+type AddressInputProps = {
+  value: string;
+  onChange: (address: string) => void;
+};
+
+function AddressInput({ value, onChange }: AddressInputProps) {
+  const [isPostcodeOpen, setIsPostcodeOpen] = useState(false);
+  const [isPostcodeReady, setIsPostcodeReady] = useState(false);
+  const postcodeContainerRef = useRef<HTMLDivElement>(null);
+  const postcodePortalRoot =
+    typeof document === "undefined"
+      ? null
+      : document.querySelector("[data-phone-frame]");
+
+  useEffect(() => {
+    if (!isPostcodeOpen || !isPostcodeReady) {
+      return;
+    }
+
+    const container = postcodeContainerRef.current;
+
+    if (!container || !window.daum) {
+      return;
+    }
+
+    new window.daum.Postcode({
+      oncomplete: (data) => {
+        onChange(data.roadAddress);
+        setIsPostcodeOpen(false);
+      },
+      onclose: () => {
+        setIsPostcodeOpen(false);
+      },
+    }).embed(container);
+  }, [isPostcodeOpen, isPostcodeReady, onChange]);
+
+  return (
+    <section className="mt-8" aria-labelledby="address-input">
+      <Script
+        src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"
+        strategy="afterInteractive"
+        onReady={() => setIsPostcodeReady(true)}
+      />
+      <h3 id="address-input" className="text-xl font-black">
+        주소 입력
+      </h3>
+      <div className="mt-3 flex gap-2">
+        <input
+          className="h-14 flex-1 rounded-2xl border border-[#bee9df] bg-white px-5 text-base font-bold outline-none placeholder:text-[#a3aaa8] focus:border-[#1ba77d] focus:ring-4 focus:ring-[#1ba77d]/10"
+          placeholder="예) 서울시 마포구 연남동 123-4"
+          aria-label="주소 입력"
+          value={value}
+          readOnly
+          onClick={() => setIsPostcodeOpen(true)}
+        />
+        <button
+          type="button"
+          className="h-14 shrink-0 rounded-2xl bg-[#1ba77d] px-5 text-sm font-black text-white"
+          onClick={() => setIsPostcodeOpen(true)}
+        >
+          주소 검색
+        </button>
+      </div>
+      <p className="mt-3 text-sm font-bold text-[#789b8c]">
+        · 주소로 사용자 유형을 자동 분류해요
+      </p>
+
+      {isPostcodeOpen && postcodePortalRoot
+        ? createPortal(
+            <div className="absolute inset-0 z-50 flex flex-col bg-white">
+              <div className="flex items-center justify-between border-b border-[#e7f4ee] px-5 py-4">
+                <h4 className="text-lg font-black">주소 검색</h4>
+                <button
+                  type="button"
+                  className="grid size-9 place-items-center rounded-full text-[#13261f]"
+                  aria-label="주소 검색 닫기"
+                  onClick={() => setIsPostcodeOpen(false)}
+                >
+                  <XIcon className="size-6" />
+                </button>
+              </div>
+              <div ref={postcodeContainerRef} className="flex-1" />
+            </div>,
+            postcodePortalRoot,
+          )
+        : null}
+    </section>
+  );
+}
+
 export default function UploadPage() {
+  const router = useRouter();
+  const { setAddress, setElectricFile, setGasFile, setStatus } = useDiagnosis();
+  const [electricFile, setLocalElectricFile] = useState<File | null>(null);
+  const [gasFile, setLocalGasFile] = useState<File | null>(null);
+  const [address, setLocalAddress] = useState("");
+
+  const handleSubmit = () => {
+    if (!electricFile) {
+      return;
+    }
+
+    setElectricFile(electricFile);
+    setGasFile(gasFile);
+    setAddress(address);
+    setStatus("running");
+    router.push("/analyzing");
+  };
+
   return (
     <>
       <div className="scrollbar-hidden h-screen overflow-y-auto overscroll-contain pb-32 sm:h-full">
@@ -521,6 +655,7 @@ export default function UploadPage() {
             badge="필수"
             badgeClassName="rounded-full bg-[#1ba77d] px-3 py-1 text-sm font-black text-white"
             cta="사진 찍기 또는 파일 첨부"
+            onFileSelected={setLocalElectricFile}
           />
 
           <BillUploadBox
@@ -528,23 +663,19 @@ export default function UploadPage() {
             badge="선택"
             badgeClassName="rounded-full bg-[#d5eee6] px-3 py-1 text-sm font-black text-[#789b8c]"
             cta="가스 고지서 추가하기"
+            onFileSelected={setLocalGasFile}
           />
 
-          <section className="mt-8" aria-labelledby="address-input">
-            <h3 id="address-input" className="text-xl font-black">
-              주소 입력
-            </h3>
-            <input
-              className="mt-3 h-14 w-full rounded-2xl border border-[#bee9df] bg-white px-5 text-base font-bold outline-none placeholder:text-[#a3aaa8] focus:border-[#1ba77d] focus:ring-4 focus:ring-[#1ba77d]/10"
-              placeholder="예) 서울시 마포구 연남동 123-4"
-              aria-label="주소 입력"
-            />
-            <p className="mt-3 text-sm font-bold text-[#789b8c]">
-              · 주소로 사용자 유형을 자동 분류해요
-            </p>
-          </section>
+          <AddressInput value={address} onChange={setLocalAddress} />
 
-          <button className="mt-8 w-full rounded-2xl bg-[#a8ddc9] px-6 py-5 text-xl font-black text-white">
+          <button
+            type="button"
+            disabled={!electricFile}
+            onClick={handleSubmit}
+            className={`mt-8 w-full rounded-2xl px-6 py-5 text-xl font-black text-white ${
+              electricFile ? "bg-[#1ba77d]" : "bg-[#a8ddc9]"
+            }`}
+          >
             분석 시작하기
           </button>
           <p className="mt-5 text-center text-sm font-bold text-[#789b8c]">

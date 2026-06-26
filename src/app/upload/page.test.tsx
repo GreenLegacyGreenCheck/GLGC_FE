@@ -1,12 +1,21 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { DiagnosisProvider } from "@/context/diagnosis-context";
 import UploadPage from "./page";
+
+const push = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push }),
+}));
 
 function renderUploadPage() {
   return render(
     <div data-phone-frame>
-      <UploadPage />
+      <DiagnosisProvider>
+        <UploadPage />
+      </DiagnosisProvider>
     </div>,
   );
 }
@@ -66,6 +75,36 @@ describe("UploadPage", () => {
     expect(
       screen.getByRole("button", { name: "사진 미리보기" }),
     ).toBeInTheDocument();
+
+    createObjectURL.mockRestore();
+    revokeObjectURL.mockRestore();
+  });
+
+  it("disables submit until an electric bill is uploaded, then navigates to /analyzing", async () => {
+    const user = userEvent.setup();
+    const createObjectURL = vi
+      .spyOn(URL, "createObjectURL")
+      .mockReturnValue("blob:bill-preview");
+    const revokeObjectURL = vi
+      .spyOn(URL, "revokeObjectURL")
+      .mockImplementation(() => undefined);
+
+    renderUploadPage();
+    expect(
+      screen.getByRole("button", { name: "분석 시작하기" }),
+    ).toBeDisabled();
+
+    await user.click(
+      screen.getByRole("button", { name: /사진 찍기 또는 파일 첨부/ }),
+    );
+    const file = new File(["bill"], "bill.png", { type: "image/png" });
+    await user.upload(screen.getByLabelText("전기 고지서 갤러리 선택"), file);
+
+    const submitButton = screen.getByRole("button", { name: "분석 시작하기" });
+
+    expect(submitButton).not.toBeDisabled();
+    await user.click(submitButton);
+    expect(push).toHaveBeenCalledWith("/analyzing");
 
     createObjectURL.mockRestore();
     revokeObjectURL.mockRestore();
