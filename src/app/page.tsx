@@ -1,6 +1,13 @@
 "use client";
 
 import BottomNavigation from "@/components/BottomNavigation";
+import {
+  BoltIcon,
+  HeartIcon,
+  HomeIcon,
+  StoreIcon,
+  TargetIcon,
+} from "@/components/icons";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -24,9 +31,21 @@ const usageSteps = [
 ];
 
 const users = [
-  { icon: "🏪", title: "소상공인", description: "가게·사무실" },
-  { icon: "🏠", title: "일반 가구", description: "주택·아파트" },
-  { icon: "💚", title: "취약계층", description: "에너지 지원" },
+  {
+    icon: StoreIcon,
+    title: "소상공인",
+    description: "가게·사무실",
+  },
+  {
+    icon: HomeIcon,
+    title: "일반 가구",
+    description: "주택·아파트",
+  },
+  {
+    icon: HeartIcon,
+    title: "취약계층",
+    description: "에너지 지원",
+  },
 ];
 
 export default function Home() {
@@ -121,12 +140,12 @@ export default function Home() {
 
           <div className="relative z-10 mt-10 grid grid-cols-2 gap-3 sm:mt-7">
             <div className="rounded-2xl bg-white/18 px-4 py-5 text-center backdrop-blur sm:py-4">
-              <div className="text-2xl">⚡</div>
+              <BoltIcon className="mx-auto size-6 text-[#facc15]" />
               <div className="mt-1 text-2xl font-black">3분</div>
               <div className="text-sm font-bold text-white/72">진단 완료</div>
             </div>
             <div className="rounded-2xl bg-white/18 px-4 py-5 text-center backdrop-blur sm:py-4">
-              <div className="text-2xl">🎯</div>
+              <TargetIcon className="mx-auto size-6 text-[#e0473e]" />
               <div className="mt-1 text-2xl font-black">90%+</div>
               <div className="text-sm font-bold text-white/72">추출 정확도</div>
             </div>
@@ -205,8 +224,8 @@ export default function Home() {
                 key={user.title}
                 className="rounded-2xl bg-white px-3 py-5 text-center shadow-lg shadow-emerald-950/8 sm:py-4"
               >
-                <div className="text-3xl" aria-hidden="true">
-                  {user.icon}
+                <div className="grid place-items-center">
+                  <user.icon className="size-8 text-[#1ba77d]" />
                 </div>
                 <h3 className="mt-3 text-base font-black">{user.title}</h3>
                 <p className="mt-1 text-sm font-semibold text-[#789b8c]">

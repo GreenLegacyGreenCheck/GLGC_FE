@@ -1,6 +1,7 @@
 "use client";
 
 import BottomNavigation from "@/components/BottomNavigation";
+import { SproutIcon } from "@/components/icons";
 import { useDiagnosis } from "@/context/diagnosis-context";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -139,7 +140,9 @@ export default function ActionsPage() {
                 >
                   <div className="flex items-start gap-3">
                     <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[#eef8f3] text-2xl">
-                      {action.icon ?? "🌱"}
+                      {action.icon ?? (
+                        <SproutIcon className="size-6 text-[#1ba77d]" />
+                      )}
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">

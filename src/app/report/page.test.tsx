@@ -87,14 +87,14 @@ describe("ReportPage", () => {
   it("renders the AI summary, goal and cost savings cards", () => {
     renderWithDiagnosis(<ReportPage />, { electricFile, result: fakeResult });
 
-    expect(screen.getByText("✨ AI 종합 의견")).toBeInTheDocument();
+    expect(screen.getByText("AI 종합 의견")).toBeInTheDocument();
     expect(screen.getAllByText("69%").length).toBeGreaterThan(0);
     expect(screen.getByText("절감 목표")).toBeInTheDocument();
     expect(screen.getAllByText("2.5t").length).toBeGreaterThan(0);
     expect(screen.getByText("절감 비용")).toBeInTheDocument();
     expect(screen.getByText("66만원")).toBeInTheDocument();
     expect(screen.getAllByText("/ 년").length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText("💰 연간 약 8만원 절감")).toBeInTheDocument();
+    expect(screen.getByText("연간 약 8만원 절감")).toBeInTheDocument();
   });
 
   it("renders the grade band scale and the usage percentile gauge", () => {
@@ -120,17 +120,17 @@ describe("ReportPage", () => {
     expect(screen.getByText("냉방기기")).toBeInTheDocument();
     expect(screen.getByText("조명·기타")).toBeInTheDocument();
     expect(
-      screen.getByText("✓ 동종업 평균보다 전기 사용량 27% 높음"),
+      screen.getByText("동종업 평균보다 전기 사용량 27% 높음"),
     ).toBeInTheDocument();
-    expect(screen.getByText("✓ 가스 사용량은 평균 수준")).toBeInTheDocument();
+    expect(screen.getByText("가스 사용량은 평균 수준")).toBeInTheDocument();
   });
 
   it("renders both trend-forecast scenarios side by side", () => {
     renderWithDiagnosis(<ReportPage />, { electricFile, result: fakeResult });
 
     expect(screen.getByText("추세 예측")).toBeInTheDocument();
-    expect(screen.getByText("⚠️ 현재 추세 유지 시")).toBeInTheDocument();
-    expect(screen.getByText("✨ 추천 액션 적용 시")).toBeInTheDocument();
+    expect(screen.getByText("현재 추세 유지 시")).toBeInTheDocument();
+    expect(screen.getByText("추천 액션 적용 시")).toBeInTheDocument();
     expect(screen.getByText("3.02t")).toBeInTheDocument();
     expect(screen.getAllByText("D").length).toBeGreaterThan(0);
   });

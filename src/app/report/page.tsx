@@ -1,6 +1,12 @@
 "use client";
 
 import BottomNavigation from "@/components/BottomNavigation";
+import {
+  CheckIcon,
+  CoinIcon,
+  SparkleIcon,
+  WarningIcon,
+} from "@/components/icons";
 import { useDiagnosis } from "@/context/diagnosis-context";
 import {
   DUMMY_REPORT,
@@ -248,11 +254,16 @@ function TrendScenarioCard({
       }`}
     >
       <p
-        className={`text-xs font-black ${
+        className={`flex items-center gap-1 text-xs font-black ${
           scenario.isWarning ? "text-[#9a5b1f]" : "text-[#0d5f4b]"
         }`}
       >
-        {scenario.isWarning ? "⚠️" : "✨"} {scenario.label}
+        {scenario.isWarning ? (
+          <WarningIcon className="size-3.5" />
+        ) : (
+          <SparkleIcon className="size-5 text-[#0d5f4b]" />
+        )}
+        {scenario.label}
       </p>
       <p className="mt-2 text-xs font-bold text-[#789b8c]">
         {scenario.months}개월 후 예상
@@ -350,8 +361,9 @@ export default function ReportPage() {
             ) : null}
 
             <div className="mt-6 rounded-2xl bg-[#eef8f3] p-5">
-              <h2 className="text-sm font-black text-[#0d5f4b]">
-                ✨ AI 종합 의견
+              <h2 className="flex items-center gap-1.5 text-sm font-black text-[#0d5f4b]">
+                <SparkleIcon className="size-6 text-[#0d5f4b]" />
+                AI 종합 의견
               </h2>
               <p className="mt-1 text-xs font-bold text-[#789b8c]">
                 AI가 이번 진단에서 가장 눈여겨본 한 줄 인사이트예요
@@ -475,7 +487,7 @@ export default function ReportPage() {
               <PercentileGauge percentile={report.percentile} />
 
               <div className="mt-4 flex items-start gap-2 rounded-2xl bg-[#fbe7c8] p-3">
-                <span aria-hidden="true">⚠️</span>
+                <WarningIcon className="size-4 shrink-0 text-[#9a5b1f]" />
                 <p className="text-sm font-bold text-[#9a5b1f]">
                   Z-score +{report.zScore} — {report.percentileMessage}
                 </p>
@@ -491,8 +503,11 @@ export default function ReportPage() {
                 {report.energyBreakdown.map((item) => (
                   <div key={item.label}>
                     <div className="flex items-center justify-between text-sm font-black">
-                      <span>
-                        {item.icon} {item.label}
+                      <span className="inline-flex items-center gap-1.5">
+                        <item.icon
+                          className={`size-4 ${item.iconColorClass}`}
+                        />
+                        {item.label}
                       </span>
                       <span>
                         {item.co2Tons} tCO₂e ({item.percentage}%)
@@ -527,11 +542,12 @@ export default function ReportPage() {
                   {report.aiEvidenceBullets.map((bullet) => (
                     <li
                       key={bullet.text}
-                      className={`text-sm font-bold ${
+                      className={`flex items-start gap-1.5 text-sm font-bold ${
                         bullet.isPositive ? "text-[#0d5f4b]" : "text-[#9a5b1f]"
                       }`}
                     >
-                      ✓ {bullet.text}
+                      <CheckIcon className="mt-0.5 size-3.5 shrink-0" />
+                      {bullet.text}
                     </li>
                   ))}
                 </ul>
@@ -570,8 +586,11 @@ export default function ReportPage() {
               <div className="mt-4 divide-y divide-[#eef3f0]">
                 {report.monthOverMonth.map((metric) => (
                   <div key={metric.label} className="py-4 first:pt-0 last:pb-0">
-                    <p className="text-sm font-black">
-                      {metric.icon} {metric.label}
+                    <p className="flex items-center gap-1.5 text-sm font-black">
+                      <metric.icon
+                        className={`size-4 ${metric.iconColorClass}`}
+                      />
+                      {metric.label}
                     </p>
 
                     <div
@@ -790,8 +809,9 @@ export default function ReportPage() {
               </div>
 
               <div className="mt-4 rounded-2xl bg-[#eef8f3] px-4 py-3">
-                <p className="text-sm font-black text-[#0d5f4b]">
-                  💰 {report.costSavings.annualSavingsLabel}
+                <p className="flex items-center gap-1.5 text-sm font-black text-[#0d5f4b]">
+                  <CoinIcon className="size-4 text-[#caa233]" />
+                  {report.costSavings.annualSavingsLabel}
                 </p>
               </div>
             </div>

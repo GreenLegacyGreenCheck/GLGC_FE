@@ -1,6 +1,7 @@
 "use client";
 
 import BottomNavigation from "@/components/BottomNavigation";
+import { ChatIcon, LightbulbIcon } from "@/components/icons";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -75,9 +76,7 @@ export default function LoginPage() {
 
         <section className="px-5 py-6">
           <div className="flex items-start gap-3 rounded-2xl bg-[#eaf6f0] p-4">
-            <span className="text-xl" aria-hidden="true">
-              💡
-            </span>
+            <LightbulbIcon className="size-5 shrink-0 text-[#f0b429]" />
             <p className="text-sm font-bold text-[#3f4a46]">
               로그인 없이도 탄소 진단과 리포트 확인은 무료로 이용할 수 있어요.
               로그인하면 결과가{" "}
@@ -181,7 +180,7 @@ export default function LoginPage() {
               setComingSoonMessage("카카오 로그인 기능은 준비 중이에요")
             }
           >
-            <span aria-hidden="true">💬</span>
+            <ChatIcon className="size-5" />
             카카오로 계속하기
           </button>
           <button

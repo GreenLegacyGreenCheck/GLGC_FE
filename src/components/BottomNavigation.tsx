@@ -1,7 +1,9 @@
+import { HomeIcon, ListIcon, UserIcon } from "@/components/icons";
+
 const tabs = [
-  { icon: "⌂", label: "홈", href: "/" },
-  { icon: "▤", label: "진단 리포트", href: "/upload" },
-  { icon: "♙", label: "마이페이지", href: "/login" },
+  { icon: HomeIcon, label: "홈", href: "/" },
+  { icon: ListIcon, label: "진단 리포트", href: "/upload" },
+  { icon: UserIcon, label: "마이페이지", href: "/login" },
 ];
 
 type BottomNavigationProps = {
@@ -29,9 +31,7 @@ export default function BottomNavigation({
               }`}
               aria-current={isActive ? "page" : undefined}
             >
-              <span className="text-2xl leading-none" aria-hidden="true">
-                {tab.icon}
-              </span>
+              <tab.icon className="size-6" />
               <span className="mt-1">{tab.label}</span>
             </a>
           );

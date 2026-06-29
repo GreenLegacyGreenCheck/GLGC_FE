@@ -1,6 +1,7 @@
 "use client";
 
 import BottomNavigation from "@/components/BottomNavigation";
+import { SproutIcon } from "@/components/icons";
 import { useDiagnosis } from "@/context/diagnosis-context";
 import { runDiagnosisPipeline, type PipelineStepId } from "@/lib/pipeline";
 import { useRouter } from "next/navigation";
@@ -46,23 +47,6 @@ function CheckIcon() {
       strokeWidth="3"
     >
       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-    </svg>
-  );
-}
-
-function SproutIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="size-9 text-[#1ba77d]"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path d="M12 21v-9" strokeLinecap="round" />
-      <path d="M12 12c0-4 -3-6-7-6 0 4 3 6 7 6Z" />
-      <path d="M12 12c0-5 3-8 8-8 0 5 -3 8-8 8Z" />
     </svg>
   );
 }
@@ -288,7 +272,7 @@ export default function AnalyzingPage() {
                 />
               </svg>
               <div className="grid size-28 place-items-center rounded-full bg-white shadow-inner">
-                <SproutIcon />
+                <SproutIcon className="size-9 text-[#1ba77d]" />
               </div>
             </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import BottomNavigation from "@/components/BottomNavigation";
+import { SearchIcon } from "@/components/icons";
 import { useDiagnosis } from "@/context/diagnosis-context";
 import { classifyUser } from "@/lib/classification";
 import { calculateScope2 } from "@/lib/scope2";
@@ -167,8 +168,8 @@ export default function EditBillPage() {
 
         <section className="px-5 py-6">
           <div className="flex items-start gap-3 rounded-2xl bg-[#fdf0df] p-4">
-            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-[#f8dfb8] text-lg">
-              🔍
+            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-[#f8dfb8]">
+              <SearchIcon className="size-4 text-[#9a5b1f]" />
             </span>
             <div>
               <p className="text-base font-black text-[#9a5b1f]">

@@ -85,8 +85,8 @@ export default function UserTypePage() {
             <div className="pointer-events-none absolute -right-14 -top-16 size-48 rounded-full bg-emerald-950/18" />
 
             <div className="relative z-10">
-              <div className="mx-auto grid size-16 place-items-center rounded-2xl bg-white/18 text-3xl">
-                {typeInfo.icon}
+              <div className="mx-auto grid size-16 place-items-center rounded-2xl bg-white/18">
+                <typeInfo.icon className="size-8 text-white" />
               </div>
               <p className="mt-4 text-sm font-bold text-white/72">
                 자동 분류 결과

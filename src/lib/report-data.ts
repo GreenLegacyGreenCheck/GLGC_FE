@@ -1,9 +1,13 @@
+import { BoltIcon, FireIcon, SwirlIcon } from "@/components/icons";
+import type { ComponentType } from "react";
+
 // Dummy report content matching the current report design. Once the
 // backend can return an AI-generated diagnosis, this should be replaced
 // by a GET response instead of a static constant.
 export type EnergyBreakdownItem = {
   label: string;
-  icon: string;
+  icon: ComponentType<{ className?: string }>;
+  iconColorClass: string;
   co2Tons: number;
   percentage: number;
   barColorClass: string;
@@ -23,7 +27,8 @@ export type EmissionCauseItem = {
 
 export type MonthOverMonthMetric = {
   label: string;
-  icon: string;
+  icon: ComponentType<{ className?: string }>;
+  iconColorClass: string;
   unit: string;
   previousValue: number;
   currentValue: number;
@@ -163,7 +168,8 @@ export const DUMMY_REPORT: DiagnosisReportData = {
   monthOverMonth: [
     {
       label: "전기",
-      icon: "⚡",
+      icon: BoltIcon,
+      iconColorClass: "text-[#facc15]",
       unit: "kWh",
       previousValue: 306,
       currentValue: 330,
@@ -175,7 +181,8 @@ export const DUMMY_REPORT: DiagnosisReportData = {
     },
     {
       label: "탄소배출량",
-      icon: "🌀",
+      icon: SwirlIcon,
+      iconColorClass: "text-[#6b7785]",
       unit: "tCO₂e",
       previousValue: 2.51,
       currentValue: 2.84,
@@ -195,14 +202,16 @@ export const DUMMY_REPORT: DiagnosisReportData = {
   energyBreakdown: [
     {
       label: "전기",
-      icon: "⚡",
+      icon: BoltIcon,
+      iconColorClass: "text-[#facc15]",
       co2Tons: 1.96,
       percentage: 69,
       barColorClass: "bg-[#1ba77d]",
     },
     {
       label: "가스",
-      icon: "🔥",
+      icon: FireIcon,
+      iconColorClass: "text-[#e0763a]",
       co2Tons: 0.88,
       percentage: 31,
       barColorClass: "bg-[#e0a23a]",

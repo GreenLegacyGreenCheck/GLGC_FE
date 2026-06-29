@@ -1,6 +1,7 @@
 "use client";
 
 import BottomNavigation from "@/components/BottomNavigation";
+import { SproutIcon } from "@/components/icons";
 import { useDiagnosis } from "@/context/diagnosis-context";
 import { getActionPolicy } from "@/lib/diagnosis-api";
 import type {
@@ -26,23 +27,6 @@ function ChevronLeftIcon() {
   );
 }
 
-function SproutIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="size-9 text-[#1ba77d]"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path d="M12 21v-9" strokeLinecap="round" />
-      <path d="M12 12c0-4 -3-6-7-6 0 4 3 6 7 6Z" />
-      <path d="M12 12c0-5 3-8 8-8 0 5 -3 8-8 8Z" />
-    </svg>
-  );
-}
-
 // Indeterminate variant of the analyzing-page loading ring: there's no
 // percent to report while RAG policy lookup is in flight, so the arc is a
 // fixed quarter-circle that spins continuously instead of filling.
@@ -51,7 +35,7 @@ function SproutSpinner() {
   const circumference = 2 * Math.PI * radius;
 
   return (
-    <div className="relative grid size-40 place-items-center rounded-full">
+    <div className="relative grid size-40 place-items-center rounded-full mt-37">
       <span className="sprout-pulse-ring absolute inset-0 rounded-full border-2 border-[#1ba77d]" />
       <span
         className="sprout-pulse-ring absolute inset-0 rounded-full border-2 border-[#1ba77d]"
@@ -82,7 +66,7 @@ function SproutSpinner() {
         />
       </svg>
       <div className="grid size-28 place-items-center rounded-full bg-white shadow-inner">
-        <SproutIcon />
+        <SproutIcon className="size-9 text-[#1ba77d]" />
       </div>
     </div>
   );
@@ -146,7 +130,11 @@ export default function SupportPage() {
 
   return (
     <>
-      <div className="scrollbar-hidden h-screen overflow-y-auto overscroll-contain pb-32 sm:h-full">
+      <div
+        className={`scrollbar-hidden flex h-screen flex-col overscroll-contain pb-32 sm:h-full ${
+          isLoading ? "overflow-hidden" : "overflow-y-auto"
+        }`}
+      >
         <header className="flex items-center gap-4 border-b border-[#e5eee9] bg-[#f2faf6] px-5 py-6">
           <Link
             href="/actions"
@@ -158,7 +146,7 @@ export default function SupportPage() {
           <h1 className="text-xl font-black">맞춤 지원사업</h1>
         </header>
 
-        <section className="flex min-h-[calc(100vh-5.5rem)] flex-col px-5 py-6">
+        <section className="flex flex-1 flex-col px-5 py-6">
           <h2 className="text-2xl font-black">
             맞춤 지원사업{" "}
             <span className="text-[#1ba77d]">{programs.length}건</span> 발견
@@ -168,7 +156,7 @@ export default function SupportPage() {
           </p>
 
           {isLoading ? (
-            <div className="flex flex-1 -translate-y-25 flex-col items-center justify-center">
+            <div className="flex flex-col items-center pt-15">
               <SproutSpinner />
               <p className="mt-9 text-sm font-bold text-[#789b8c]">
                 지원사업을 찾고 있어요...
@@ -181,7 +169,7 @@ export default function SupportPage() {
           ) : programs.length === 0 && defaultActions.length > 0 ? (
             <>
               <p className="mt-6 text-sm font-bold text-[#789b8c]">
-                맞춤 지원사업은 없지만, 이런 도움을 받아보세요
+                이런 도움을 받아보세요
               </p>
               <div className="mt-4 space-y-4">
                 {defaultActions.map((action) => (
@@ -251,9 +239,7 @@ export default function SupportPage() {
 
           {!isLoading ? (
             <div className="mt-6 rounded-2xl bg-[#eaf6f0] p-6 text-center">
-              <p className="text-3xl" aria-hidden="true">
-                🌱
-              </p>
+              <SproutIcon className="mx-auto size-8 text-[#1ba77d]" />
               <p className="mt-2 text-base font-black">
                 진단 완료! 탄소 감축을 시작해 보세요
               </p>

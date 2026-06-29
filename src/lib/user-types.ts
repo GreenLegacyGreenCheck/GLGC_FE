@@ -1,7 +1,9 @@
+import { HeartIcon, HomeIcon, StoreIcon } from "@/components/icons";
 import type { UserType } from "@/context/diagnosis-context";
+import type { ComponentType } from "react";
 
 export type UserTypeInfo = {
-  icon: string;
+  icon: ComponentType<{ className?: string }>;
   heroDescription: string;
   services: string[];
   selectionLabel: string;
@@ -11,7 +13,7 @@ export type UserTypeInfo = {
 
 export const USER_TYPE_INFO: Record<UserType, UserTypeInfo> = {
   소상공인: {
-    icon: "🏪",
+    icon: StoreIcon,
     heroDescription:
       "주소 및 전력 사용 패턴 분석 결과, 소상공인 사업장으로 분류되었어요.",
     services: ["업종 평균 비교", "사업장 맞춤 감축 액션", "소상공인 지원사업"],
@@ -20,7 +22,7 @@ export const USER_TYPE_INFO: Record<UserType, UserTypeInfo> = {
     tags: ["업종 평균 비교", "사업장 맞춤 감축 액션", "소상공인 지원사업"],
   },
   일반가구: {
-    icon: "🏠",
+    icon: HomeIcon,
     heroDescription:
       "주소 및 전력 사용 패턴 분석 결과, 일반 가구로 분류되었어요.",
     services: ["가구 평균 비교", "생활 절약 중심 감축 액션", "가정 지원사업"],
@@ -29,7 +31,7 @@ export const USER_TYPE_INFO: Record<UserType, UserTypeInfo> = {
     tags: ["가구 평균 비교", "생활 절약 중심 감축 액션", "가정 지원사업"],
   },
   취약계층: {
-    icon: "💚",
+    icon: HeartIcon,
     heroDescription:
       "주소 및 전력 사용 패턴 분석 결과, 에너지 취약계층으로 분류되었어요.",
     services: ["복지 중심 감축 액션", "에너지 바우처", "취약계층 지원사업"],
