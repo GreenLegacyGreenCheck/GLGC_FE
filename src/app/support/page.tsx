@@ -26,6 +26,68 @@ function ChevronLeftIcon() {
   );
 }
 
+function SproutIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="size-9 text-[#1ba77d]"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path d="M12 21v-9" strokeLinecap="round" />
+      <path d="M12 12c0-4 -3-6-7-6 0 4 3 6 7 6Z" />
+      <path d="M12 12c0-5 3-8 8-8 0 5 -3 8-8 8Z" />
+    </svg>
+  );
+}
+
+// Indeterminate variant of the analyzing-page loading ring: there's no
+// percent to report while RAG policy lookup is in flight, so the arc is a
+// fixed quarter-circle that spins continuously instead of filling.
+function SproutSpinner() {
+  const radius = 44;
+  const circumference = 2 * Math.PI * radius;
+
+  return (
+    <div className="relative grid size-40 place-items-center rounded-full">
+      <span className="sprout-pulse-ring absolute inset-0 rounded-full border-2 border-[#1ba77d]" />
+      <span
+        className="sprout-pulse-ring absolute inset-0 rounded-full border-2 border-[#1ba77d]"
+        style={{ animationDelay: "0.9s" }}
+      />
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 100 100"
+        className="absolute inset-0 size-40 animate-spin"
+      >
+        <circle
+          cx="50"
+          cy="50"
+          r={radius}
+          fill="none"
+          stroke="#d8f2ea"
+          strokeWidth="8"
+        />
+        <circle
+          cx="50"
+          cy="50"
+          r={radius}
+          fill="none"
+          stroke="#1ba77d"
+          strokeWidth="8"
+          strokeLinecap="round"
+          strokeDasharray={`${circumference * 0.25} ${circumference}`}
+        />
+      </svg>
+      <div className="grid size-28 place-items-center rounded-full bg-white shadow-inner">
+        <SproutIcon />
+      </div>
+    </div>
+  );
+}
+
 export default function SupportPage() {
   const router = useRouter();
   const { electricFile, result, selectedActionCodes } = useDiagnosis();
@@ -96,7 +158,7 @@ export default function SupportPage() {
           <h1 className="text-xl font-black">맞춤 지원사업</h1>
         </header>
 
-        <section className="px-5 py-6">
+        <section className="flex min-h-[calc(100vh-5.5rem)] flex-col px-5 py-6">
           <h2 className="text-2xl font-black">
             맞춤 지원사업{" "}
             <span className="text-[#1ba77d]">{programs.length}건</span> 발견
@@ -106,9 +168,12 @@ export default function SupportPage() {
           </p>
 
           {isLoading ? (
-            <p className="mt-6 text-sm font-bold text-[#789b8c]">
-              지원사업을 찾고 있어요...
-            </p>
+            <div className="flex flex-1 -translate-y-25 flex-col items-center justify-center">
+              <SproutSpinner />
+              <p className="mt-9 text-sm font-bold text-[#789b8c]">
+                지원사업을 찾고 있어요...
+              </p>
+            </div>
           ) : selectedActionCodes.length === 0 ? (
             <p className="mt-6 text-sm font-bold text-[#789b8c]">
               감축 액션을 먼저 선택하면 맞춤 지원사업을 보여드려요.
@@ -184,25 +249,27 @@ export default function SupportPage() {
             </div>
           )}
 
-          <div className="mt-6 rounded-2xl bg-[#eaf6f0] p-6 text-center">
-            <p className="text-3xl" aria-hidden="true">
-              🌱
-            </p>
-            <p className="mt-2 text-base font-black">
-              진단 완료! 탄소 감축을 시작해 보세요
-            </p>
-            <p className="mt-2 text-sm font-bold text-[#789b8c]">
-              로그인하면 리포트가 마이페이지에 자동 저장돼요.
-              <br />
-              정기 진단으로 감축 목표를 꾸준히 관리해 보세요.
-            </p>
-            <Link
-              href="/login"
-              className="mt-4 block w-full rounded-2xl bg-white px-5 py-3 text-center text-base font-black text-[#1ba77d]"
-            >
-              로그인하고 리포트 저장하기
-            </Link>
-          </div>
+          {!isLoading ? (
+            <div className="mt-6 rounded-2xl bg-[#eaf6f0] p-6 text-center">
+              <p className="text-3xl" aria-hidden="true">
+                🌱
+              </p>
+              <p className="mt-2 text-base font-black">
+                진단 완료! 탄소 감축을 시작해 보세요
+              </p>
+              <p className="mt-2 text-sm font-bold text-[#789b8c]">
+                로그인하면 리포트가 마이페이지에 자동 저장돼요.
+                <br />
+                정기 진단으로 감축 목표를 꾸준히 관리해 보세요.
+              </p>
+              <Link
+                href="/login"
+                className="mt-4 block w-full rounded-2xl bg-white px-5 py-3 text-center text-base font-black text-[#1ba77d]"
+              >
+                로그인하고 리포트 저장하기
+              </Link>
+            </div>
+          ) : null}
         </section>
       </div>
 
