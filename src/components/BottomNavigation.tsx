@@ -1,10 +1,7 @@
-import { HomeIcon, ListIcon, UserIcon } from "@/components/icons";
+"use client";
 
-const tabs = [
-  { icon: HomeIcon, label: "홈", href: "/" },
-  { icon: ListIcon, label: "진단 리포트", href: "/upload" },
-  { icon: UserIcon, label: "마이페이지", href: "/login" },
-];
+import { HomeIcon, ListIcon, UserIcon } from "@/components/icons";
+import { useDiagnosis } from "@/context/diagnosis-context";
 
 type BottomNavigationProps = {
   activeLabel?: string;
@@ -13,6 +10,20 @@ type BottomNavigationProps = {
 export default function BottomNavigation({
   activeLabel = "홈",
 }: BottomNavigationProps) {
+  const { result } = useDiagnosis();
+
+  const tabs = [
+    { icon: HomeIcon, label: "홈", href: "/" },
+    // 리포트를 이미 한 번 받았으면 다시 업로드부터 시작하지 않고 곧바로
+    // 그 리포트로 이동한다.
+    {
+      icon: ListIcon,
+      label: "진단 리포트",
+      href: result ? "/report" : "/upload",
+    },
+    { icon: UserIcon, label: "마이페이지", href: "/login" },
+  ];
+
   return (
     <nav
       className="absolute inset-x-4 bottom-4 z-20 rounded-[2rem] bg-white p-2 shadow-xl shadow-emerald-950/12"

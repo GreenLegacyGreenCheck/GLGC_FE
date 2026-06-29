@@ -309,3 +309,41 @@ export function UserIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+export function RefreshIcon({ className }: IconProps) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+    </svg>
+  );
+}
+
+export function WifiOffIcon({ className }: IconProps) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M5 9a11 11 0 0 1 14 0" />
+      <path d="M8 13a6.5 6.5 0 0 1 8 0" />
+      <circle cx="12" cy="18" r="0.75" fill="currentColor" stroke="none" />
+      <path d="M3 3l18 18" />
+    </svg>
+  );
+}

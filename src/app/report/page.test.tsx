@@ -176,4 +176,13 @@ describe("ReportPage", () => {
       screen.getByRole("link", { name: "감축 액션 추천 보기" }),
     ).toHaveAttribute("href", "/actions");
   });
+
+  it("links the re-diagnose CTA back to the bill upload page", () => {
+    renderWithDiagnosis(<ReportPage />, { electricFile, result: fakeResult });
+
+    expect(screen.getByRole("link", { name: "다시 진단받기" })).toHaveAttribute(
+      "href",
+      "/upload",
+    );
+  });
 });

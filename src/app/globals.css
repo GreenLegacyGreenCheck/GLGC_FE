@@ -51,6 +51,21 @@ input {
   animation: sprout-pulse-ring 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
+@keyframes sprout-sway {
+  0%,
+  100% {
+    transform: rotate(-6deg);
+  }
+  50% {
+    transform: rotate(6deg);
+  }
+}
+
+.sprout-sway {
+  transform-origin: bottom center;
+  animation: sprout-sway 2.4s ease-in-out infinite;
+}
+
 @keyframes step-badge-pop {
   0% {
     transform: scale(0.55);

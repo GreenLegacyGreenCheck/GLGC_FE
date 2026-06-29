@@ -4,6 +4,7 @@ import BottomNavigation from "@/components/BottomNavigation";
 import {
   CheckIcon,
   CoinIcon,
+  RefreshIcon,
   SparkleIcon,
   WarningIcon,
 } from "@/components/icons";
@@ -851,6 +852,16 @@ export default function ReportPage() {
           >
             감축 액션 추천 보기
           </Link>
+
+          <div className="mt-6 text-center">
+            <Link
+              href="/upload"
+              className="inline-flex items-center gap-1.5 text-sm font-black text-[#1ba77d]"
+            >
+              <RefreshIcon className="size-4" />
+              다시 진단받기
+            </Link>
+          </div>
         </section>
       </div>
 
