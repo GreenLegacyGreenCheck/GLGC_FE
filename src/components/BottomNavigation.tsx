@@ -21,7 +21,7 @@ export default function BottomNavigation({
       label: "진단 리포트",
       href: result ? "/report" : "/upload",
     },
-    { icon: UserIcon, label: "마이페이지", href: "/login" },
+    { icon: UserIcon, label: "마이페이지", href: "/mypage" },
   ];
 
   return (

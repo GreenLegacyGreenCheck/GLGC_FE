@@ -35,4 +35,13 @@ describe("BottomNavigation", () => {
       "/report",
     );
   });
+
+  it("links the mypage tab to /mypage", () => {
+    renderWithDiagnosis(<BottomNavigation />, { result: null });
+
+    expect(screen.getByRole("link", { name: /마이페이지/ })).toHaveAttribute(
+      "href",
+      "/mypage",
+    );
+  });
 });
