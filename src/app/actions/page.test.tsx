@@ -55,6 +55,7 @@ const fakeResult: DiagnosisResult = {
   averageOcrConfidence: 94.2,
   diagnosisId: "diagnosis-1",
   recommendedActions: fakeActions,
+  hasGasBill: false,
 };
 
 const electricFile = new File(["bill"], "electric.png", {

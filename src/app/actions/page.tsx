@@ -46,14 +46,14 @@ function CheckIcon() {
 
 export default function ActionsPage() {
   const router = useRouter();
-  const { electricFile, result, setSelectedActionCodes } = useDiagnosis();
+  const { result, isHydrated, setSelectedActionCodes } = useDiagnosis();
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!electricFile || !result) {
+    if (isHydrated && !result) {
       router.replace("/upload");
     }
-  }, [electricFile, result, router]);
+  }, [isHydrated, result, router]);
 
   if (!result) {
     return null;

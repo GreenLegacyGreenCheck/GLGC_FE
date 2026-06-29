@@ -36,6 +36,12 @@ const fakeResult: DiagnosisResult = {
   averageOcrConfidence: 91.1,
   diagnosisId: "diagnosis-1",
   recommendedActions: [],
+  hasGasBill: true,
+};
+
+const fakeResultNoGas: DiagnosisResult = {
+  ...fakeResult,
+  hasGasBill: false,
 };
 
 const electricFile = new File(["bill"], "electric.png", {
@@ -85,7 +91,7 @@ describe("UserTypePage", () => {
     renderWithDiagnosis(<UserTypePage />, {
       electricFile,
       gasFile: null,
-      result: fakeResult,
+      result: fakeResultNoGas,
     });
 
     expect(screen.queryByText("가스 고지서 기준월")).not.toBeInTheDocument();

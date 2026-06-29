@@ -68,14 +68,13 @@ function BillField({
 
 export default function EditBillPage() {
   const router = useRouter();
-  const { address, electricFile, gasFile, result, setAddress, setResult } =
-    useDiagnosis();
+  const { address, result, isHydrated, setAddress, setResult } = useDiagnosis();
 
   useEffect(() => {
-    if (!electricFile || !result) {
+    if (isHydrated && !result) {
       router.replace("/upload");
     }
-  }, [electricFile, result, router]);
+  }, [isHydrated, result, router]);
 
   const [addressInput, setAddressInput] = useState(address);
   const [electricUsage, setElectricUsage] = useState(
@@ -98,7 +97,7 @@ export default function EditBillPage() {
 
   const handleSave = () => {
     const newElectricUsage = parseUsage(electricUsage);
-    const newGasUsage = gasFile ? parseUsage(gasUsage) : null;
+    const newGasUsage = result.hasGasBill ? parseUsage(gasUsage) : null;
     const newBillingMonth = billingMonthInput.trim() || null;
 
     const electricOcr = {
@@ -114,7 +113,7 @@ export default function EditBillPage() {
     };
 
     const gasOcr =
-      gasFile && result.gasOcr
+      result.hasGasBill && result.gasOcr
         ? {
             ...result.gasOcr,
             usageM3: {
@@ -193,7 +192,7 @@ export default function EditBillPage() {
             />
           </div>
 
-          {gasFile ? (
+          {result.hasGasBill ? (
             <div className="mt-6 rounded-2xl bg-white p-5 shadow-lg shadow-emerald-950/8">
               <h2 className="text-sm font-bold text-[#789b8c]">가스 고지서</h2>
 

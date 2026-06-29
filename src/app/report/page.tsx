@@ -290,16 +290,16 @@ function TrendScenarioCard({
 
 export default function ReportPage() {
   const router = useRouter();
-  const { address, electricFile, result } = useDiagnosis();
+  const { address, result, isHydrated } = useDiagnosis();
   const [isDownloading, setIsDownloading] = useState(false);
   const [selectedDegrees, setSelectedDegrees] = useState(2);
   const reportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!electricFile || !result) {
+    if (isHydrated && !result) {
       router.replace("/upload");
     }
-  }, [electricFile, result, router]);
+  }, [isHydrated, result, router]);
 
   if (!result) {
     return null;

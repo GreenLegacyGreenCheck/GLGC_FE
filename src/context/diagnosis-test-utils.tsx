@@ -26,6 +26,7 @@ const defaultState: DiagnosisStateOverrides = {
   status: "idle",
   error: null,
   selectedActionCodes: [],
+  isHydrated: true,
 };
 
 export function renderWithDiagnosis(
@@ -43,6 +44,7 @@ export function renderWithDiagnosis(
       status: "idle",
       error: null,
       selectedActionCodes: [],
+      isHydrated: true,
       ...state,
       setAddress: (address) => setState((current) => ({ ...current, address })),
       setElectricFile: (electricFile) =>

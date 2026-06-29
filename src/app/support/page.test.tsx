@@ -34,6 +34,7 @@ const fakeResult: DiagnosisResult = {
   averageOcrConfidence: 94.2,
   diagnosisId: "diagnosis-1",
   recommendedActions: [],
+  hasGasBill: false,
 };
 
 const electricFile = new File(["bill"], "electric.png", {
@@ -129,7 +130,7 @@ describe("SupportPage", () => {
     });
 
     expect(
-      await screen.findByText("맞춤 지원사업은 없지만, 이런 도움을 받아보세요"),
+      await screen.findByText("이런 도움을 받아보세요"),
     ).toBeInTheDocument();
     expect(
       screen.getByText("관할 지자체 복지센터 방문 상담"),

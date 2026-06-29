@@ -39,13 +39,13 @@ function CheckIcon() {
 
 export default function UserTypePage() {
   const router = useRouter();
-  const { address, electricFile, gasFile, result } = useDiagnosis();
+  const { address, result, isHydrated } = useDiagnosis();
 
   useEffect(() => {
-    if (!electricFile || !result) {
+    if (isHydrated && !result) {
       router.replace("/upload");
     }
-  }, [electricFile, result, router]);
+  }, [isHydrated, result, router]);
 
   if (!result) {
     return null;
@@ -134,7 +134,7 @@ export default function UserTypePage() {
                     : "직접 입력 필요"}
                 </dd>
               </div>
-              {gasFile ? (
+              {result.hasGasBill ? (
                 <>
                   <div className="flex items-center justify-between py-3">
                     <dt className="text-sm font-bold text-[#789b8c]">

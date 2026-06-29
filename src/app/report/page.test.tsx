@@ -35,6 +35,7 @@ const fakeResult: DiagnosisResult = {
   averageOcrConfidence: 94.2,
   diagnosisId: "diagnosis-1",
   recommendedActions: [],
+  hasGasBill: false,
 };
 
 const electricFile = new File(["bill"], "electric.png", {
@@ -46,6 +47,17 @@ describe("ReportPage", () => {
     renderWithDiagnosis(<ReportPage />, { electricFile, result: null });
 
     expect(replace).toHaveBeenCalledWith("/upload");
+  });
+
+  it("does not redirect while diagnosis state is still hydrating from a refresh", () => {
+    replace.mockClear();
+
+    renderWithDiagnosis(<ReportPage />, {
+      result: null,
+      isHydrated: false,
+    });
+
+    expect(replace).not.toHaveBeenCalled();
   });
 
   it("renders the dummy report figures", () => {

@@ -41,16 +41,16 @@ function CheckIcon() {
 
 export default function ChangeUserTypePage() {
   const router = useRouter();
-  const { electricFile, result, setUserTypeOverride } = useDiagnosis();
+  const { result, isHydrated, setUserTypeOverride } = useDiagnosis();
   const [selectedType, setSelectedType] = useState<UserType | null>(
     result?.userType ?? null,
   );
 
   useEffect(() => {
-    if (!electricFile || !result) {
+    if (isHydrated && !result) {
       router.replace("/upload");
     }
-  }, [electricFile, result, router]);
+  }, [isHydrated, result, router]);
 
   if (!result) {
     return null;

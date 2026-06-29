@@ -74,7 +74,7 @@ function SproutSpinner() {
 
 export default function SupportPage() {
   const router = useRouter();
-  const { electricFile, result, selectedActionCodes } = useDiagnosis();
+  const { result, isHydrated, selectedActionCodes } = useDiagnosis();
   const [programs, setPrograms] = useState<SupportProgram[]>([]);
   const [defaultActions, setDefaultActions] = useState<
     DefaultActionSuggestion[]
@@ -83,10 +83,10 @@ export default function SupportPage() {
   const isLoading = selectedActionCodes.length > 0 && !hasFetched;
 
   useEffect(() => {
-    if (!electricFile || !result) {
+    if (isHydrated && !result) {
       router.replace("/upload");
     }
-  }, [electricFile, result, router]);
+  }, [isHydrated, result, router]);
 
   useEffect(() => {
     if (!result || selectedActionCodes.length === 0) {

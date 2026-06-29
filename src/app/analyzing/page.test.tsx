@@ -25,6 +25,7 @@ const fakeResult: DiagnosisResult = {
   averageOcrConfidence: 90,
   diagnosisId: "diagnosis-1",
   recommendedActions: [],
+  hasGasBill: false,
 };
 
 describe("AnalyzingPage", () => {

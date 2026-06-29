@@ -117,5 +117,6 @@ export async function runDiagnosisPipeline(
     averageOcrConfidence,
     diagnosisId,
     recommendedActions,
+    hasGasBill: gasFile !== null,
   };
 }
