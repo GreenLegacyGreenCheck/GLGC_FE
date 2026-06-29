@@ -2,7 +2,11 @@
 
 import BottomNavigation from "@/components/BottomNavigation";
 import { useDiagnosis } from "@/context/diagnosis-context";
-import { DUMMY_SUPPORT_PROGRAMS } from "@/lib/support-programs";
+import { getActionPolicy } from "@/lib/diagnosis-api";
+import type {
+  DefaultActionSuggestion,
+  SupportProgram,
+} from "@/lib/support-programs";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -24,16 +28,55 @@ function ChevronLeftIcon() {
 
 export default function SupportPage() {
   const router = useRouter();
-  const { electricFile, result } = useDiagnosis();
-  const [activeComingSoonIndex, setActiveComingSoonIndex] = useState<
-    number | null
-  >(null);
+  const { electricFile, result, selectedActionCodes } = useDiagnosis();
+  const [programs, setPrograms] = useState<SupportProgram[]>([]);
+  const [defaultActions, setDefaultActions] = useState<
+    DefaultActionSuggestion[]
+  >([]);
+  const [hasFetched, setHasFetched] = useState(false);
+  const isLoading = selectedActionCodes.length > 0 && !hasFetched;
 
   useEffect(() => {
     if (!electricFile || !result) {
       router.replace("/upload");
     }
   }, [electricFile, result, router]);
+
+  useEffect(() => {
+    if (!result || selectedActionCodes.length === 0) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    Promise.all(
+      selectedActionCodes.map((code) =>
+        getActionPolicy(result.diagnosisId, code),
+      ),
+    ).then((results) => {
+      if (!isCancelled) {
+        setPrograms(results.flatMap((result) => result.programs));
+
+        // 같은 default_actions 목록이 선택한 액션마다 똑같이 내려올 수 있어
+        // id 기준으로 중복 제거한다.
+        const seenIds = new Set<number>();
+        const uniqueDefaultActions = results
+          .flatMap((result) => result.defaultActions)
+          .filter((action) => {
+            if (seenIds.has(action.id)) return false;
+            seenIds.add(action.id);
+            return true;
+          });
+        setDefaultActions(uniqueDefaultActions);
+
+        setHasFetched(true);
+      }
+    });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [result, selectedActionCodes]);
 
   if (!result) {
     return null;
@@ -56,72 +99,90 @@ export default function SupportPage() {
         <section className="px-5 py-6">
           <h2 className="text-2xl font-black">
             맞춤 지원사업{" "}
-            <span className="text-[#1ba77d]">
-              {DUMMY_SUPPORT_PROGRAMS.length}건
-            </span>{" "}
-            발견
+            <span className="text-[#1ba77d]">{programs.length}건</span> 발견
           </h2>
           <p className="mt-2 text-sm font-bold text-[#789b8c]">
             탄소 진단 결과 기반 자동 매칭 · 지원사업 바로 신청
           </p>
 
-          <div className="mt-6 space-y-4">
-            {DUMMY_SUPPORT_PROGRAMS.map((program, index) => (
-              <div
-                key={program.title}
-                className="rounded-2xl border border-[#eef3f0] bg-white p-5"
-              >
-                <div className="flex items-center justify-between">
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-black ${program.agencyBadgeClass}`}
+          {isLoading ? (
+            <p className="mt-6 text-sm font-bold text-[#789b8c]">
+              지원사업을 찾고 있어요...
+            </p>
+          ) : selectedActionCodes.length === 0 ? (
+            <p className="mt-6 text-sm font-bold text-[#789b8c]">
+              감축 액션을 먼저 선택하면 맞춤 지원사업을 보여드려요.
+            </p>
+          ) : programs.length === 0 && defaultActions.length > 0 ? (
+            <>
+              <p className="mt-6 text-sm font-bold text-[#789b8c]">
+                맞춤 지원사업은 없지만, 이런 도움을 받아보세요
+              </p>
+              <div className="mt-4 space-y-4">
+                {defaultActions.map((action) => (
+                  <div
+                    key={action.id}
+                    className="rounded-2xl border border-[#eef3f0] bg-white p-5"
                   >
-                    {program.agency}
-                  </span>
-                  <span className="text-sm font-black text-[#1ba77d]">
-                    ✅ 매칭 {program.matchPercent}%
-                  </span>
-                </div>
-                <h3 className="mt-3 text-base font-black">{program.title}</h3>
-                <p className="mt-1 text-sm">
-                  <span
-                    className={`text-base font-black ${program.amountColorClass}`}
-                  >
-                    {program.amountLabel}
-                  </span>
-                  <span className="font-bold text-[#789b8c]">
-                    {" "}
-                    · {program.deadlineLabel}
-                  </span>
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {program.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full bg-[#eef8f3] px-3 py-1 text-xs font-bold text-[#1ba77d]"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-                <p className="mt-3 text-xs font-bold text-[#789b8c]">
-                  필요 서류: {program.requiredDocs}
-                </p>
+                    <h3 className="text-base font-black">{action.title}</h3>
+                    <p className="mt-1 text-sm font-bold text-[#789b8c]">
+                      {action.description}
+                    </p>
 
-                <button
-                  type="button"
-                  className="mt-4 w-full rounded-2xl bg-[#1ba77d] px-5 py-3 text-base font-black text-white"
-                  onClick={() => setActiveComingSoonIndex(index)}
-                >
-                  지원사업 바로가기 →
-                </button>
-                {activeComingSoonIndex === index ? (
-                  <p className="mt-2 text-center text-xs font-bold text-[#789b8c]">
-                    신청 연동 기능은 준비 중이에요
-                  </p>
-                ) : null}
+                    <a
+                      href={action.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-4 block w-full rounded-2xl bg-[#1ba77d] px-5 py-3 text-center text-base font-black text-white"
+                    >
+                      바로가기
+                    </a>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          ) : programs.length === 0 ? (
+            <p className="mt-6 text-sm font-bold text-[#789b8c]">
+              선택한 액션에 매칭되는 지원사업을 찾지 못했어요.
+            </p>
+          ) : (
+            <div className="mt-6 space-y-4">
+              {programs.map((program, index) => (
+                <div
+                  key={`${program.title}-${index}`}
+                  className="rounded-2xl border border-[#eef3f0] bg-white p-5"
+                >
+                  <span className="rounded-full bg-[#eef8f3] px-3 py-1 text-xs font-black text-[#1ba77d]">
+                    {program.actionTitle}
+                  </span>
+                  <h3 className="mt-3 text-base font-black">{program.title}</h3>
+                  <p className="mt-1 text-sm font-bold text-[#789b8c]">
+                    {program.description}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="rounded-full bg-[#dff1ea] px-3 py-1 text-xs font-black text-[#1ba77d]">
+                      {program.carbonSaving}
+                    </span>
+                    <span className="rounded-full bg-[#fbe7c8] px-3 py-1 text-xs font-black text-[#9a5b1f]">
+                      {program.difficulty}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-xs font-bold text-[#789b8c]">
+                    필요 서류: {program.documents}
+                  </p>
+
+                  <a
+                    href={program.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-4 block w-full rounded-2xl bg-[#1ba77d] px-5 py-3 text-center text-base font-black text-white"
+                  >
+                    지원사업 바로가기
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="mt-6 rounded-2xl bg-[#eaf6f0] p-6 text-center">
             <p className="text-3xl" aria-hidden="true">
@@ -139,7 +200,7 @@ export default function SupportPage() {
               href="/login"
               className="mt-4 block w-full rounded-2xl bg-white px-5 py-3 text-center text-base font-black text-[#1ba77d]"
             >
-              로그인하고 리포트 저장하기 →
+              로그인하고 리포트 저장하기
             </Link>
           </div>
         </section>

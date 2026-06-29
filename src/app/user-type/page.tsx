@@ -53,7 +53,9 @@ export default function UserTypePage() {
 
   const typeInfo = USER_TYPE_INFO[result.userType];
   const electricKwh = result.electricOcr?.usageKwh.value ?? null;
+  const electricBillingMonth = result.electricOcr?.billingMonth.value ?? null;
   const gasM3 = result.gasOcr?.usageM3.value ?? null;
+  const gasBillingMonth = result.gasOcr?.billingMonth.value ?? null;
 
   return (
     <>
@@ -89,14 +91,7 @@ export default function UserTypePage() {
               <p className="mt-4 text-sm font-bold text-white/72">
                 자동 분류 결과
               </p>
-              <p className="mt-1 text-3xl font-black">
-                {result.userType}
-                {result.userTypeOverridden ? (
-                  <span className="ml-2 text-sm font-bold text-white/72">
-                    (수동 변경됨)
-                  </span>
-                ) : null}
-              </p>
+              <p className="mt-1 text-3xl font-black">{result.userType}</p>
               <p className="mx-auto mt-3 max-w-xs text-sm font-bold leading-6 text-white/80">
                 {typeInfo.heroDescription}
               </p>
@@ -123,7 +118,15 @@ export default function UserTypePage() {
               </div>
               <div className="flex items-center justify-between py-3">
                 <dt className="text-sm font-bold text-[#789b8c]">
-                  월 전력 사용량
+                  전기 고지서 기준월
+                </dt>
+                <dd className="text-sm font-black">
+                  {electricBillingMonth ?? "직접 입력 필요"}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between py-3">
+                <dt className="text-sm font-bold text-[#789b8c]">
+                  전기 사용량
                 </dt>
                 <dd className="text-sm font-black">
                   {electricKwh !== null
@@ -132,14 +135,24 @@ export default function UserTypePage() {
                 </dd>
               </div>
               {gasFile ? (
-                <div className="flex items-center justify-between py-3">
-                  <dt className="text-sm font-bold text-[#789b8c]">
-                    월 가스 사용량
-                  </dt>
-                  <dd className="text-sm font-black">
-                    {gasM3 !== null ? `${gasM3} m³` : "직접 입력 필요"}
-                  </dd>
-                </div>
+                <>
+                  <div className="flex items-center justify-between py-3">
+                    <dt className="text-sm font-bold text-[#789b8c]">
+                      가스 고지서 기준월
+                    </dt>
+                    <dd className="text-sm font-black">
+                      {gasBillingMonth ?? "직접 입력 필요"}
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between py-3">
+                    <dt className="text-sm font-bold text-[#789b8c]">
+                      가스 사용량
+                    </dt>
+                    <dd className="text-sm font-black">
+                      {gasM3 !== null ? `${gasM3} m³` : "직접 입력 필요"}
+                    </dd>
+                  </div>
+                </>
               ) : null}
               <div className="flex items-center justify-between py-3">
                 <dt className="text-sm font-bold text-[#789b8c]">
@@ -180,7 +193,7 @@ export default function UserTypePage() {
             href="/report"
             className="mt-8 block w-full rounded-2xl bg-[#1ba77d] px-6 py-5 text-center text-xl font-black text-white"
           >
-            진단 리포트 보기 →
+            진단 리포트 보기
           </Link>
         </section>
       </div>

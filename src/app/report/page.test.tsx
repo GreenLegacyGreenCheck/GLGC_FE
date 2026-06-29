@@ -25,7 +25,7 @@ const fakeResult: DiagnosisResult = {
     usageM3: { value: null, confidence: 0 },
     contractType: { value: "일반용", confidence: 94.2 },
     supplyAddress: { value: null, confidence: 0 },
-    billedAmount: { value: 42350, confidence: 94.2 },
+    billingMonth: { value: "2026-06", confidence: 94.2 },
   },
   gasOcr: null,
   totalCo2Kg: 137.2,
@@ -33,6 +33,8 @@ const fakeResult: DiagnosisResult = {
   userTypeOverridden: false,
   zScore: 1.8,
   averageOcrConfidence: 94.2,
+  diagnosisId: "diagnosis-1",
+  recommendedActions: [],
 };
 
 const electricFile = new File(["bill"], "electric.png", {
@@ -66,7 +68,9 @@ describe("ReportPage", () => {
     expect(screen.getByText("+42%")).toBeInTheDocument();
     expect(screen.getByText("동종업 평균")).toBeInTheDocument();
     expect(screen.getByText("2.36")).toBeInTheDocument();
-    expect(screen.getByText("306 → 330kWh")).toBeInTheDocument();
+    expect(screen.getByText("306")).toBeInTheDocument();
+    expect(screen.getByText("330")).toBeInTheDocument();
+    expect(screen.getAllByText("kWh").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("▲ 7.9% 증가")).toBeInTheDocument();
   });
 
@@ -80,16 +84,65 @@ describe("ReportPage", () => {
     expect(screen.getByText("2.42t")).toBeInTheDocument();
   });
 
-  it("renders the AI summary, goal, grade prediction and cost savings cards", () => {
+  it("renders the AI summary, goal and cost savings cards", () => {
     renderWithDiagnosis(<ReportPage />, { electricFile, result: fakeResult });
 
     expect(screen.getByText("✨ AI 종합 의견")).toBeInTheDocument();
-    expect(screen.getByText("69%")).toBeInTheDocument();
-    expect(screen.getByText("탄소 절감 목표")).toBeInTheDocument();
-    expect(screen.getByText("2.5t")).toBeInTheDocument();
-    expect(screen.getByText("탄소 등급 변화 예측")).toBeInTheDocument();
-    expect(screen.getByText("66만원/년")).toBeInTheDocument();
-    expect(screen.getByText("연간 약 8만원 절감")).toBeInTheDocument();
+    expect(screen.getAllByText("69%").length).toBeGreaterThan(0);
+    expect(screen.getByText("절감 목표")).toBeInTheDocument();
+    expect(screen.getAllByText("2.5t").length).toBeGreaterThan(0);
+    expect(screen.getByText("절감 비용")).toBeInTheDocument();
+    expect(screen.getByText("66만원")).toBeInTheDocument();
+    expect(screen.getAllByText("/ 년").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("💰 연간 약 8만원 절감")).toBeInTheDocument();
+  });
+
+  it("renders the grade band scale and the usage percentile gauge", () => {
+    renderWithDiagnosis(<ReportPage />, { electricFile, result: fakeResult });
+
+    expect(screen.getByText("핵심 KPI")).toBeInTheDocument();
+    // GradeBandScale is rendered twice (KPI card + trend forecast card):
+    // the grade letter sits inside its colored segment, the tons range is
+    // centered underneath it.
+    expect(screen.getAllByText("0~1.5").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("3~4").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("평균 비교")).toBeInTheDocument();
+    expect(screen.getByText("업종 내 사용량 백분위")).toBeInTheDocument();
+    expect(screen.getByText("적게 사용")).toBeInTheDocument();
+    expect(screen.getByText("많이 사용")).toBeInTheDocument();
+  });
+
+  it("renders the emission cause tree and the AI evidence bullets", () => {
+    renderWithDiagnosis(<ReportPage />, { electricFile, result: fakeResult });
+
+    expect(screen.getByText("원인 분석 (SHAP)")).toBeInTheDocument();
+    expect(screen.getByText("총 배출량")).toBeInTheDocument();
+    expect(screen.getByText("냉방기기")).toBeInTheDocument();
+    expect(screen.getByText("조명·기타")).toBeInTheDocument();
+    expect(
+      screen.getByText("✓ 동종업 평균보다 전기 사용량 27% 높음"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("✓ 가스 사용량은 평균 수준")).toBeInTheDocument();
+  });
+
+  it("renders both trend-forecast scenarios side by side", () => {
+    renderWithDiagnosis(<ReportPage />, { electricFile, result: fakeResult });
+
+    expect(screen.getByText("추세 예측")).toBeInTheDocument();
+    expect(screen.getByText("⚠️ 현재 추세 유지 시")).toBeInTheDocument();
+    expect(screen.getByText("✨ 추천 액션 적용 시")).toBeInTheDocument();
+    expect(screen.getByText("3.02t")).toBeInTheDocument();
+    expect(screen.getAllByText("D").length).toBeGreaterThan(0);
+  });
+
+  it("renders the before/after comparison card", () => {
+    renderWithDiagnosis(<ReportPage />, { electricFile, result: fakeResult });
+
+    expect(
+      screen.getByText("개선 후 모습 (Before / After)"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Before")).toBeInTheDocument();
+    expect(screen.getByText("After")).toBeInTheDocument();
   });
 
   it("downloads a PDF when the download button is clicked", async () => {
@@ -98,7 +151,7 @@ describe("ReportPage", () => {
     renderWithDiagnosis(<ReportPage />, { electricFile, result: fakeResult });
 
     await user.click(
-      screen.getByRole("button", { name: "리포트 PDF 다운로드 ⬇" }),
+      screen.getByRole("button", { name: "리포트 PDF 다운로드" }),
     );
 
     expect(downloadReportPdf).toHaveBeenCalled();
@@ -108,7 +161,7 @@ describe("ReportPage", () => {
     renderWithDiagnosis(<ReportPage />, { electricFile, result: fakeResult });
 
     expect(
-      screen.getByRole("link", { name: "감축 액션 추천 보기 →" }),
+      screen.getByRole("link", { name: "감축 액션 추천 보기" }),
     ).toHaveAttribute("href", "/actions");
   });
 });

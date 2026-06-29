@@ -1,50 +1,42 @@
-// Dummy support-program matches. Once a backend can return real
-// AI-matched government/agency programs, this should be replaced by a
-// GET response instead of a static constant.
+// 백엔드가 RAG 정책 추천 결과를 그대로 전달한다 (GLGC-BE
+// `GET /diagnosis/:id/actions/:code/policy`). RAG 응답에는 agency/매칭률/마감일/태그에
+// 대응하는 필드가 없어 더미 데이터에 있던 그 항목들은 화면에서 뺐다.
 export type SupportProgram = {
-  agency: string;
-  agencyBadgeClass: string;
-  matchPercent: number;
   title: string;
-  amountLabel: string;
-  amountColorClass: string;
-  deadlineLabel: string;
-  tags: string[];
-  requiredDocs: string;
+  actionTitle: string;
+  description: string;
+  documents: string;
+  link: string;
+  difficulty: string;
+  carbonSaving: string;
+};
+
+// RAG에 맞춤 매칭이 없을 때 대신 내려주는 일반 안내 항목. 링크/난이도/절감액처럼
+// 매칭 결과에만 있는 필드가 없어 SupportProgram과 별도 타입으로 둔다.
+export type DefaultActionSuggestion = {
+  id: number;
+  title: string;
+  description: string;
+  url: string;
 };
 
 export const DUMMY_SUPPORT_PROGRAMS: SupportProgram[] = [
   {
-    agency: "중소벤처기업부",
-    agencyBadgeClass: "bg-[#e3edf7] text-[#3a5a82]",
-    matchPercent: 98,
     title: "소상공인 에너지효율화 지원사업",
-    amountLabel: "최대 300만원",
-    amountColorClass: "text-[#13261f]",
-    deadlineLabel: "접수 ~2025.08.31",
-    tags: ["소상공인 전용", "설비 교체"],
-    requiredDocs: "사업자등록증 · 고지서 3개월치 · 에너지진단 확인서",
+    actionTitle: "LED 조명 교체",
+    description: "노후 조명을 LED로 교체하는 소상공인 대상 지원사업입니다.",
+    documents: "사업자등록증 · 고지서 3개월치 · 에너지진단 확인서",
+    link: "https://example.com/programs/led-lighting",
+    difficulty: "쉬움",
+    carbonSaving: "연 30만원",
   },
   {
-    agency: "한국에너지공단",
-    agencyBadgeClass: "bg-[#fbe7c8] text-[#9a5b1f]",
-    matchPercent: 87,
     title: "노후 냉방설비 고효율 교체 지원",
-    amountLabel: "최대 200만원",
-    amountColorClass: "text-[#13261f]",
-    deadlineLabel: "접수 ~2025.09.15",
-    tags: ["에어컨 교체", "인버터"],
-    requiredDocs: "사업자등록증 · 기존 설비 사진 · 견적서",
-  },
-  {
-    agency: "서울특별시",
-    agencyBadgeClass: "bg-[#ece3f7] text-[#6b4a9e]",
-    matchPercent: 95,
-    title: "에너지진단 무료 방문 서비스",
-    amountLabel: "무료",
-    amountColorClass: "text-[#1ba77d]",
-    deadlineLabel: "접수 상시 접수",
-    tags: ["무료", "서울시 전용"],
-    requiredDocs: "신청서 · 사업자등록증",
+    actionTitle: "인버터 에어컨 교체",
+    description: "정속형 냉방기를 인버터형으로 교체하는 비용을 지원합니다.",
+    documents: "사업자등록증 · 기존 설비 사진 · 견적서",
+    link: "https://example.com/programs/hvac-efficiency",
+    difficulty: "중간",
+    carbonSaving: "연 50만원",
   },
 ];

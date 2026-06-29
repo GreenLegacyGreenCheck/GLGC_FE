@@ -16,7 +16,18 @@ export type OcrExtraction = {
   usageM3: OcrField<number>;
   contractType: OcrField<string>;
   supplyAddress: OcrField<string>;
-  billedAmount: OcrField<number>;
+  billingMonth: OcrField<string>;
+};
+
+export type RecommendedActionView = {
+  code: string;
+  icon: string | null;
+  title: string;
+  description: string;
+  difficulty: string;
+  costLabel: string;
+  expectedMinKg: number;
+  expectedMaxKg: number;
 };
 
 export type DiagnosisResult = {
@@ -27,6 +38,8 @@ export type DiagnosisResult = {
   userTypeOverridden: boolean;
   zScore: number;
   averageOcrConfidence: number;
+  diagnosisId: string;
+  recommendedActions: RecommendedActionView[];
 };
 
 export type DiagnosisStatus = "idle" | "running" | "done" | "error";
@@ -38,6 +51,10 @@ type DiagnosisState = {
   result: DiagnosisResult | null;
   status: DiagnosisStatus;
   error: string | null;
+  // /actions에서 선택한 액션을 /support로 넘기기 위한 상태. /actions의 선택은
+  // 로컬 state라 페이지 이동 시 사라지므로, 어떤 액션의 정책을 조회해야
+  // 하는지 알려주려면 context에 들고 있어야 한다.
+  selectedActionCodes: string[];
 };
 
 const initialState: DiagnosisState = {
@@ -47,6 +64,7 @@ const initialState: DiagnosisState = {
   result: null,
   status: "idle",
   error: null,
+  selectedActionCodes: [],
 };
 
 export type DiagnosisContextValue = DiagnosisState & {
@@ -56,6 +74,7 @@ export type DiagnosisContextValue = DiagnosisState & {
   setResult: (result: DiagnosisResult) => void;
   setStatus: (status: DiagnosisStatus, error?: string | null) => void;
   setUserTypeOverride: (userType: UserType) => void;
+  setSelectedActionCodes: (codes: string[]) => void;
   reset: () => void;
 };
 
@@ -89,6 +108,8 @@ export function DiagnosisProvider({ children }: { children: React.ReactNode }) {
               }
             : current,
         ),
+      setSelectedActionCodes: (selectedActionCodes) =>
+        setState((current) => ({ ...current, selectedActionCodes })),
       reset: () => setState(initialState),
     }),
     [state],

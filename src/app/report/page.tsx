@@ -2,7 +2,12 @@
 
 import BottomNavigation from "@/components/BottomNavigation";
 import { useDiagnosis } from "@/context/diagnosis-context";
-import { DUMMY_REPORT } from "@/lib/report-data";
+import {
+  DUMMY_REPORT,
+  type EmissionTreeNode,
+  type GradeBand,
+  type TrendScenario,
+} from "@/lib/report-data";
 import { downloadReportPdf } from "@/lib/report-pdf";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -58,6 +63,216 @@ function ScoreRing({ score, colorHex }: { score: number; colorHex: string }) {
         />
       </svg>
       <span className="text-lg font-black">{score}</span>
+    </div>
+  );
+}
+
+// Reference scale showing where the current tCO₂e value falls across the
+// grade bands (A~D) — used both at the KPI card (current grade in context)
+// and the trend forecast (where each scenario would land).
+function GradeBandScale({
+  bands,
+  currentTons,
+}: {
+  bands: GradeBand[];
+  currentTons: number;
+}) {
+  const scaleMax = bands[bands.length - 1].maxTons;
+  // Rendered worst-to-best so the best grade lands on the right — the
+  // marker position is mirrored to match (100% - raw position).
+  const markerPercent = 100 - Math.min((currentTons / scaleMax) * 100, 100);
+
+  // Each label is centered under its own segment by construction (same
+  // width math as the segment above it) instead of being evenly spaced
+  // with flex justify-between, which drifted out of alignment whenever
+  // the bands themselves weren't equal width.
+  const orderedBands = [...bands].reverse();
+  const segments = orderedBands.reduce<
+    { band: GradeBand; widthPercent: number; leftPercent: number }[]
+  >((acc, band) => {
+    const widthPercent = ((band.maxTons - band.minTons) / scaleMax) * 100;
+    const previous = acc[acc.length - 1];
+    const leftPercent = previous
+      ? previous.leftPercent + previous.widthPercent
+      : 0;
+
+    return [...acc, { band, widthPercent, leftPercent }];
+  }, []);
+
+  return (
+    <div className="mt-4">
+      <div className="relative">
+        <div className="flex h-6 w-full overflow-hidden rounded-full">
+          {segments.map(({ band, widthPercent }) => (
+            <div
+              key={band.grade}
+              className={`grid place-items-center ${band.colorClass}`}
+              style={{ width: `${widthPercent}%` }}
+            >
+              <span className="text-xs font-black text-white">
+                {band.grade}
+              </span>
+            </div>
+          ))}
+        </div>
+        <span
+          aria-hidden="true"
+          className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-md"
+          style={{ left: `${markerPercent}%` }}
+        />
+      </div>
+      <div className="relative mt-2 h-4 text-xs font-bold text-[#789b8c]">
+        {segments.map(({ band, widthPercent, leftPercent }) => (
+          <span
+            key={band.grade}
+            className="absolute -translate-x-1/2"
+            style={{ left: `${leftPercent + widthPercent / 2}%` }}
+          >
+            {band.minTons}~{band.maxTons}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Visualizes where this business sits on the usage spectrum among peers —
+// "동종업 상위 N%" used to be a text-only line; the marker position makes
+// that comparison legible at a glance instead of requiring mental math.
+function PercentileGauge({ percentile }: { percentile: number }) {
+  const markerPercent = 100 - percentile;
+
+  return (
+    <div className="mt-4">
+      <div className="relative h-3 w-full rounded-full bg-linear-to-r from-[#cfe9de] to-[#e0a23a]">
+        <span
+          aria-hidden="true"
+          className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-md"
+          style={{ left: `${markerPercent}%` }}
+        />
+      </div>
+      <div className="mt-2 flex justify-between text-xs font-bold text-[#789b8c]">
+        <span>적게 사용</span>
+        <span>많이 사용</span>
+      </div>
+    </div>
+  );
+}
+
+// Recursive cause-tree node: a labeled box, optionally branching into
+// child causes below it (e.g. 전기 → 냉방기기/조명·기타). Built from plain
+// borders/divs rather than SVG paths to match this page's existing
+// no-charting-library convention.
+function EmissionTreeNodeBox({
+  node,
+  emphasize,
+}: {
+  node: EmissionTreeNode;
+  emphasize?: boolean;
+}) {
+  const children = node.children ?? [];
+
+  return (
+    <div className="inline-flex flex-col items-center">
+      <div
+        className={`min-w-22 rounded-xl border px-3 py-2 text-center ${
+          emphasize
+            ? "border-[#1ba77d] bg-[#eef8f3]"
+            : "border-[#eef3f0] bg-white"
+        }`}
+      >
+        <p className="text-sm font-black">{node.label}</p>
+        <p className="text-xs font-bold text-[#789b8c]">{node.percentage}%</p>
+      </div>
+
+      {children.length ? (
+        <div className="mt-3 flex flex-col items-center">
+          <div aria-hidden="true" className="h-3 w-0.5 bg-[#d8e7e0]" />
+          <div className="flex items-start gap-4">
+            {children.map((child, index) => {
+              const isFirst = index === 0;
+              const isLast = index === children.length - 1;
+
+              return (
+                <div
+                  key={child.id}
+                  className="relative flex flex-col items-center"
+                >
+                  {children.length > 1 ? (
+                    // Each child draws its own half of the branch bar,
+                    // anchored to ITS OWN center (50%) rather than a
+                    // hardcoded pixel offset — a parent box that itself
+                    // has children (e.g. 전기) ends up wider than a plain
+                    // leaf box, so only a per-child, self-centered segment
+                    // (extending into the shared gap-4 on the far side)
+                    // stays attached regardless of that width.
+                    <div
+                      aria-hidden="true"
+                      className="absolute top-0 h-0.5 bg-[#d8e7e0]"
+                      style={{
+                        left: isFirst ? "50%" : "-1rem",
+                        right: isLast ? "50%" : "-1rem",
+                      }}
+                    />
+                  ) : null}
+                  <div aria-hidden="true" className="h-3 w-0.5 bg-[#d8e7e0]" />
+                  <EmissionTreeNodeBox node={child} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// One scenario ("현재 추세 유지 시" vs "추천 액션 적용 시") in the trend
+// forecast — rendered twice side by side so the cost of inaction is
+// visible right next to the upside of taking action.
+function TrendScenarioCard({
+  scenario,
+  currentGrade,
+  currentGradeColorClass,
+}: {
+  scenario: TrendScenario;
+  currentGrade: string;
+  currentGradeColorClass: string;
+}) {
+  return (
+    <div
+      className={`flex-1 rounded-2xl border p-4 ${
+        scenario.isWarning
+          ? "border-[#f1c9a6] bg-[#fdf3e4]"
+          : "border-[#bfe9da] bg-[#eef8f3]"
+      }`}
+    >
+      <p
+        className={`text-xs font-black ${
+          scenario.isWarning ? "text-[#9a5b1f]" : "text-[#0d5f4b]"
+        }`}
+      >
+        {scenario.isWarning ? "⚠️" : "✨"} {scenario.label}
+      </p>
+      <p className="mt-2 text-xs font-bold text-[#789b8c]">
+        {scenario.months}개월 후 예상
+      </p>
+      <div className="mt-3 flex items-center justify-center gap-3">
+        <span
+          className={`inline-grid size-9 place-items-center rounded-lg text-base font-black text-white ${currentGradeColorClass}`}
+        >
+          {currentGrade}
+        </span>
+        <span aria-hidden="true" className="text-[#789b8c]"></span>
+        <span
+          className={`inline-grid size-9 place-items-center rounded-lg text-base font-black text-white ${scenario.projectedGradeColorClass}`}
+        >
+          {scenario.projectedGrade}
+        </span>
+      </div>
+      <p className="mt-3 text-center text-lg font-black">
+        {scenario.projectedTons}t
+      </p>
     </div>
   );
 }
@@ -138,6 +353,9 @@ export default function ReportPage() {
               <h2 className="text-sm font-black text-[#0d5f4b]">
                 ✨ AI 종합 의견
               </h2>
+              <p className="mt-1 text-xs font-bold text-[#789b8c]">
+                AI가 이번 진단에서 가장 눈여겨본 한 줄 인사이트예요
+              </p>
               <p className="mt-2 text-sm font-bold leading-6 text-[#13261f]">
                 {report.aiSummary.map((part, index) => (
                   <span
@@ -153,7 +371,11 @@ export default function ReportPage() {
             </div>
 
             <div className="mt-4 rounded-3xl bg-[#fdf3e4] p-5">
-              <div className="flex items-start justify-between">
+              <h2 className="text-sm font-black text-[#9a7a3f]">핵심 KPI</h2>
+              <p className="mt-1 text-xs font-bold text-[#9a7a3f]">
+                우리 가게의 연간 탄소 배출량과 등급을 한눈에 확인해요
+              </p>
+              <div className="mt-4 flex items-start justify-between">
                 <div>
                   <p className="text-sm font-bold text-[#9a7a3f]">
                     연간 탄소 배출량
@@ -179,78 +401,92 @@ export default function ReportPage() {
                 </div>
               </div>
 
-              <div className="mt-5 border-t border-[#f1dfb9] pt-5">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-bold text-[#789b8c]">
-                    {report.comparisonLabel}
-                  </p>
-                  <p className="text-sm font-black text-[#c2802e]">
-                    +{report.comparisonPercent}% 높음
-                  </p>
-                </div>
+              <GradeBandScale
+                bands={report.gradeBands}
+                currentTons={report.annualCo2Tons}
+              />
+            </div>
 
-                <div className="mt-4 flex items-end justify-center gap-6">
-                  <div className="flex flex-col items-center">
-                    <div className="flex h-32 w-12 items-end">
-                      <div
-                        className="w-full rounded-t-lg bg-[#cfe9de]"
-                        style={{
-                          height: `${(report.nationalAverageTons / maxComparisonTons) * 100}%`,
-                        }}
-                      />
-                    </div>
-                    <p className="mt-2 text-base font-black">
-                      {report.nationalAverageTons}
-                    </p>
-                    <p className="text-xs font-bold text-[#789b8c]">
-                      전국 평균
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <div className="flex h-32 w-12 items-end">
-                      <div
-                        className="w-full rounded-t-lg bg-[#cfe0f5]"
-                        style={{
-                          height: `${(report.industryAverageTons / maxComparisonTons) * 100}%`,
-                        }}
-                      />
-                    </div>
-                    <p className="mt-2 text-base font-black">
-                      {report.industryAverageTons}
-                    </p>
-                    <p className="text-xs font-bold text-[#789b8c]">
-                      동종업 평균
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <div className="flex h-32 w-12 items-end">
-                      <div
-                        className="w-full rounded-t-lg bg-[#e0a23a]"
-                        style={{
-                          height: `${(report.ourUsageTons / maxComparisonTons) * 100}%`,
-                        }}
-                      />
-                    </div>
-                    <p className="mt-2 text-base font-black">
-                      {report.ourUsageTons}
-                    </p>
-                    <p className="text-xs font-bold text-[#789b8c]">
-                      우리 가게
-                    </p>
-                  </div>
-                </div>
+            <div className="mt-6 rounded-2xl border border-[#eef3f0] bg-white p-5">
+              <h2 className="text-base font-black">평균 비교</h2>
+              <p className="mt-1 text-xs font-bold text-[#789b8c]">
+                같은 업종의 다른 가게들과 비교했을 때 우리 위치예요
+              </p>
 
-                <div className="mt-5 flex items-start gap-2 rounded-2xl bg-[#fbe7c8] p-3">
-                  <span aria-hidden="true">⚠️</span>
-                  <p className="text-sm font-bold text-[#9a5b1f]">
-                    Z-score +{report.zScore} — {report.percentileMessage}
+              <div className="mt-4 flex items-center justify-between">
+                <p className="text-sm font-bold text-[#789b8c]">
+                  {report.comparisonLabel}
+                </p>
+                <p className="text-sm font-black text-[#c2802e]">
+                  +{report.comparisonPercent}% 높음
+                </p>
+              </div>
+
+              <div className="mt-4 flex items-end gap-3">
+                <div className="flex flex-1 flex-col items-center">
+                  <div className="flex h-32 w-full max-w-14 items-end">
+                    <div
+                      className="w-full rounded-t-lg bg-[#cfe9de]"
+                      style={{
+                        height: `${(report.nationalAverageTons / maxComparisonTons) * 100}%`,
+                      }}
+                    />
+                  </div>
+                  <p className="mt-2 text-base font-black">
+                    {report.nationalAverageTons}
+                  </p>
+                  <p className="text-xs font-bold text-[#789b8c]">전국 평균</p>
+                </div>
+                <div className="flex flex-1 flex-col items-center">
+                  <div className="flex h-32 w-full max-w-14 items-end">
+                    <div
+                      className="w-full rounded-t-lg bg-[#cfe0f5]"
+                      style={{
+                        height: `${(report.industryAverageTons / maxComparisonTons) * 100}%`,
+                      }}
+                    />
+                  </div>
+                  <p className="mt-2 text-base font-black">
+                    {report.industryAverageTons}
+                  </p>
+                  <p className="text-xs font-bold text-[#789b8c]">
+                    동종업 평균
                   </p>
                 </div>
+                <div className="flex flex-1 flex-col items-center">
+                  <div className="flex h-32 w-full max-w-14 items-end">
+                    <div
+                      className="w-full rounded-t-lg bg-[#e0a23a]"
+                      style={{
+                        height: `${(report.ourUsageTons / maxComparisonTons) * 100}%`,
+                      }}
+                    />
+                  </div>
+                  <p className="mt-2 text-base font-black">
+                    {report.ourUsageTons}
+                  </p>
+                  <p className="text-xs font-bold text-[#789b8c]">우리 가게</p>
+                </div>
+              </div>
+
+              <p className="mt-5 text-xs font-bold text-[#789b8c]">
+                업종 내 사용량 백분위
+              </p>
+              <PercentileGauge percentile={report.percentile} />
+
+              <div className="mt-4 flex items-start gap-2 rounded-2xl bg-[#fbe7c8] p-3">
+                <span aria-hidden="true">⚠️</span>
+                <p className="text-sm font-bold text-[#9a5b1f]">
+                  Z-score +{report.zScore} — {report.percentileMessage}
+                </p>
               </div>
             </div>
 
             <div className="mt-6 rounded-2xl border border-[#eef3f0] bg-white p-5">
               <h2 className="text-base font-black">에너지원별 배출량</h2>
+              <p className="mt-1 text-xs font-bold text-[#789b8c]">
+                전기·가스 등 에너지원별로 배출 비중이 어떻게 나뉘는지 보여줘요
+              </p>
               <div className="mt-4 space-y-4">
                 {report.energyBreakdown.map((item) => (
                   <div key={item.label}>
@@ -274,88 +510,160 @@ export default function ReportPage() {
             </div>
 
             <div className="mt-6 rounded-2xl border border-[#eef3f0] bg-white p-5">
-              <h2 className="text-base font-black">주요 배출 원인 분석</h2>
+              <h2 className="text-base font-black">원인 분석 (SHAP)</h2>
               <p className="mt-1 text-xs font-bold text-[#789b8c]">
-                SHAP 분석 기반 · 탄소배출 증가 주요 원인
+                SHAP 분석 기반 · 탄소 배출 증가의 주요 원인을 트리로 보여줘요
               </p>
-              <div className="mt-4 space-y-3">
-                {report.emissionCauses.map((cause) => (
-                  <div
-                    key={cause.label}
-                    className="flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="grid size-6 shrink-0 place-items-center rounded-full bg-[#eef3f0] text-xs font-black text-[#789b8c]">
-                        {cause.rank}
-                      </span>
-                      <span className="text-sm font-bold">{cause.label}</span>
-                    </div>
-                    <span className="text-sm font-black text-[#c2802e]">
-                      +{cause.percentChange}%
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
 
-            <div className="mt-6 rounded-2xl border border-[#eef3f0] bg-white p-5">
-              <h2 className="text-base font-black">이번 달 vs 지난 달 변화</h2>
-              <div className="mt-4 space-y-4">
-                {report.monthOverMonth.map((metric) => (
-                  <div key={metric.label}>
-                    <p className="text-sm font-bold text-[#789b8c]">
-                      {metric.label}
-                    </p>
-                    <p className="mt-1 text-base font-black">
-                      {metric.previousValue} → {metric.currentValue}
-                      {metric.unit}
-                    </p>
-                    <p
-                      className={`mt-1 text-sm font-black ${
-                        metric.isIncrease ? "text-[#c2802e]" : "text-[#1ba77d]"
+              <div className="mt-5 flex justify-center overflow-x-auto pb-1">
+                <EmissionTreeNodeBox node={report.emissionTree} emphasize />
+              </div>
+
+              <div className="mt-5 rounded-2xl bg-[#f2f6f3] p-3">
+                <p className="text-xs font-black text-[#789b8c]">
+                  AI 분석 근거
+                </p>
+                <ul className="mt-2 space-y-1.5">
+                  {report.aiEvidenceBullets.map((bullet) => (
+                    <li
+                      key={bullet.text}
+                      className={`text-sm font-bold ${
+                        bullet.isPositive ? "text-[#0d5f4b]" : "text-[#9a5b1f]"
                       }`}
                     >
-                      {metric.isIncrease ? "▲" : "▼"} {metric.percentChange}%{" "}
-                      {metric.isIncrease ? "증가" : "감소"}
+                      ✓ {bullet.text}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="mt-5 border-t border-[#eef3f0] pt-4">
+                <p className="text-xs font-bold text-[#789b8c]">
+                  순위별 상세 보기
+                </p>
+                <div className="mt-3 space-y-3">
+                  {report.emissionCauses.map((cause) => (
+                    <div
+                      key={cause.label}
+                      className="flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="grid size-6 shrink-0 place-items-center rounded-full bg-[#eef3f0] text-xs font-black text-[#789b8c]">
+                          {cause.rank}
+                        </span>
+                        <span className="text-sm font-bold">{cause.label}</span>
+                      </div>
+                      <span className="text-sm font-black text-[#c2802e]">
+                        +{cause.percentChange}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-[#eef3f0] bg-white p-5">
+              <h2 className="text-base font-black">전월 비교</h2>
+              <p className="mt-1 text-xs font-bold text-[#789b8c]">
+                지난달과 비교해 사용량이 어떻게 달라졌는지 보여줘요
+              </p>
+              <div className="mt-4 divide-y divide-[#eef3f0]">
+                {report.monthOverMonth.map((metric) => (
+                  <div key={metric.label} className="py-4 first:pt-0 last:pb-0">
+                    <p className="text-sm font-black">
+                      {metric.icon} {metric.label}
                     </p>
+
+                    <div
+                      className={`mt-3 overflow-hidden rounded-2xl border ${metric.accentBorderClass}`}
+                    >
+                      <div className="flex items-center px-4 py-4">
+                        <div className="flex-1 text-center">
+                          <p className="text-xs font-bold text-[#789b8c]">
+                            지난달
+                          </p>
+                          <p className="mt-1 text-3xl font-black">
+                            {metric.previousValue}
+                          </p>
+                          <p className="text-xs font-bold text-[#789b8c]">
+                            {metric.unit}
+                          </p>
+                        </div>
+                        <div className="flex h-14 flex-col items-center justify-center gap-1">
+                          <div
+                            aria-hidden="true"
+                            className="h-4 w-px bg-[#d8e7e0]"
+                          />
+                          <span
+                            aria-hidden="true"
+                            className="text-[#789b8c]"
+                          ></span>
+                          <div
+                            aria-hidden="true"
+                            className="h-4 w-px bg-[#d8e7e0]"
+                          />
+                        </div>
+                        <div className="flex-1 text-center">
+                          <p className="text-xs font-bold text-[#789b8c]">
+                            이번달
+                          </p>
+                          <p
+                            className={`mt-1 text-3xl font-black ${metric.accentTextClass}`}
+                          >
+                            {metric.currentValue}
+                          </p>
+                          <p className="text-xs font-bold text-[#789b8c]">
+                            {metric.unit}
+                          </p>
+                        </div>
+                      </div>
+                      <div
+                        className={`px-4 py-3 text-center text-base font-black text-white ${metric.accentBgClass}`}
+                      >
+                        {metric.isIncrease ? "▲" : "▼"} {metric.percentChange}%{" "}
+                        {metric.isIncrease ? "증가" : "감소"}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
 
             <div className="mt-6 rounded-2xl border border-[#eef3f0] bg-white p-5">
-              <h2 className="text-base font-black">탄소 절감 목표</h2>
-              <p className="mt-1 text-xs font-bold text-[#789b8c]">올해 목표</p>
-              <div className="mt-3 flex items-center gap-4">
-                <p className="text-xl font-black">{report.goal.currentTons}t</p>
-                <span aria-hidden="true" className="text-[#789b8c]">
-                  →
-                </span>
-                <p className="text-xl font-black text-[#1ba77d]">
-                  {report.goal.targetTons}t
-                </p>
-              </div>
-              <div className="mt-4 flex items-center gap-3">
-                <div className="h-2.5 flex-1 rounded-full bg-[#eef3f0]">
-                  <div
-                    className="h-full rounded-full bg-[#1ba77d]"
-                    style={{ width: `${report.goal.progressPercent}%` }}
-                  />
-                </div>
-                <span className="text-sm font-black text-[#1ba77d]">
-                  {report.goal.progressPercent}%
-                </span>
-              </div>
-              <p className="mt-2 text-xs font-bold text-[#789b8c]">
-                현재 진행률
+              <h2 className="text-base font-black">추세 예측</h2>
+              <p className="mt-1 text-xs font-bold text-[#789b8c]">
+                지금처럼 두면 vs 추천 액션을 적용하면,{" "}
+                {report.trendScenarios[0].months}
+                개월 후 예상되는 모습이에요
               </p>
+
+              <div className="mt-4 flex gap-3">
+                {report.trendScenarios.map((scenario) => (
+                  <TrendScenarioCard
+                    key={scenario.label}
+                    scenario={scenario}
+                    currentGrade={report.grade}
+                    currentGradeColorClass={report.gradeColorClass}
+                  />
+                ))}
+              </div>
+
+              <p className="mt-5 text-xs font-bold text-[#789b8c]">
+                탄소 등급 기준표
+              </p>
+              <GradeBandScale
+                bands={report.gradeBands}
+                currentTons={report.annualCo2Tons}
+              />
             </div>
 
             <div className="mt-6 rounded-2xl border border-[#eef3f0] bg-white p-5">
-              <h2 className="text-base font-black">감축 시뮬레이션</h2>
+              <h2 className="text-base font-black">
+                개선 후 모습 (Before / After)
+              </h2>
               <p className="mt-1 text-xs font-bold text-[#789b8c]">
-                {report.simulationLabel} 탄소 배출량이 어떻게 달라지는지
-                확인해보세요
+                {report.simulationLabel} 탄소 배출량이 어떻게 달라지는지 바로
+                비교해보세요
               </p>
 
               <div className="mt-4 flex gap-2">
@@ -376,97 +684,135 @@ export default function ReportPage() {
                 ))}
               </div>
 
-              <div className="mt-5 flex items-center justify-center gap-4 text-center">
-                <div>
-                  <p className="text-xs font-bold text-[#789b8c]">현재</p>
-                  <p className="text-xl font-black">{report.annualCo2Tons}t</p>
+              <div className="mt-5 flex items-end gap-4">
+                <div className="flex flex-1 flex-col items-center">
+                  <div className="flex h-28 w-full max-w-16 items-end">
+                    <div className="h-full w-full rounded-t-lg bg-[#e0a23a]" />
+                  </div>
+                  <p className="mt-2 text-lg font-black">
+                    {report.annualCo2Tons}t
+                  </p>
+                  <p className="text-xs font-bold text-[#789b8c]">Before</p>
                 </div>
-                <span aria-hidden="true" className="text-[#789b8c]">
-                  →
-                </span>
-                <div>
-                  <p className="text-xs font-bold text-[#789b8c]">예상</p>
-                  <p className="text-xl font-black text-[#1ba77d]">
+                <span aria-hidden="true" className="pb-9 text-[#789b8c]"></span>
+                <div className="flex flex-1 flex-col items-center">
+                  <div className="flex h-28 w-full max-w-16 items-end">
+                    <div
+                      className="w-full rounded-t-lg bg-[#1ba77d]"
+                      style={{
+                        height: `${(selectedSimulation.projectedTons / report.annualCo2Tons) * 100}%`,
+                      }}
+                    />
+                  </div>
+                  <p className="mt-2 text-lg font-black text-[#1ba77d]">
                     {selectedSimulation.projectedTons}t
                   </p>
+                  <p className="text-xs font-bold text-[#789b8c]">After</p>
                 </div>
-                <span className="text-sm font-black text-[#1ba77d]">
-                  {selectedSimulation.percentChange}%
-                </span>
+              </div>
+
+              <div className="mt-5 rounded-2xl bg-[#eef8f3] py-3 text-center text-2xl font-black text-[#1ba77d]">
+                {selectedSimulation.percentChange}%
               </div>
             </div>
 
             <div className="mt-6 rounded-2xl border border-[#eef3f0] bg-white p-5">
-              <h2 className="text-base font-black">예상 절감 비용</h2>
+              <h2 className="text-base font-black">절감 목표</h2>
               <p className="mt-1 text-xs font-bold text-[#789b8c]">
-                {report.costSavings.label}
+                올해 목표 대비 현재 진행 상황이에요
               </p>
-              <div className="mt-3 flex items-center gap-4">
+
+              <div className="mt-4 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-bold text-[#789b8c]">현재</p>
-                  <p className="text-lg font-black">
-                    {report.costSavings.currentAnnualCostLabel}
+                  <p className="mt-1 text-3xl font-black">
+                    {report.goal.currentTons}t
                   </p>
                 </div>
-                <span aria-hidden="true" className="text-[#789b8c]">
-                  →
-                </span>
-                <div>
-                  <p className="text-xs font-bold text-[#789b8c]">예상</p>
-                  <p className="text-lg font-black text-[#1ba77d]">
-                    {report.costSavings.projectedAnnualCostLabel}
+                <div className="flex flex-1 items-center gap-1">
+                  <div
+                    aria-hidden="true"
+                    className="h-px flex-1 bg-[#cfe9de]"
+                  />
+                  <span aria-hidden="true" className="text-[#789b8c]"></span>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-bold text-[#789b8c]">목표</p>
+                  <p className="mt-1 text-3xl font-black text-[#1ba77d]">
+                    {report.goal.targetTons}t
                   </p>
                 </div>
               </div>
-              <p className="mt-3 text-sm font-black text-[#1ba77d]">
-                {report.costSavings.annualSavingsLabel}
-              </p>
-            </div>
-          </div>
 
-          <div className="mt-6 rounded-2xl border border-[#eef3f0] bg-white p-5">
-            <h2 className="text-base font-black">탄소 등급 변화 예측</h2>
-            <div className="mt-4 flex items-center justify-center gap-5">
-              <div className="text-center">
-                <span
-                  className={`inline-grid size-11 place-items-center rounded-xl text-xl font-black text-white ${report.gradePrediction.currentGradeColorClass}`}
-                >
-                  {report.gradePrediction.currentGrade}
-                </span>
-                <p className="mt-2 text-xs font-bold text-[#789b8c]">현재</p>
+              <div className="mt-5 h-3 w-full rounded-full bg-[#eef3f0]">
+                <div
+                  className="h-full rounded-full bg-[#1ba77d]"
+                  style={{ width: `${report.goal.progressPercent}%` }}
+                />
               </div>
-              <span aria-hidden="true" className="text-[#789b8c]">
-                →
-              </span>
-              <div className="text-center">
-                <span
-                  className={`inline-grid size-11 place-items-center rounded-xl text-xl font-black text-white ${report.gradePrediction.projectedGradeColorClass}`}
-                >
-                  {report.gradePrediction.projectedGrade}
-                </span>
-                <p className="mt-2 text-xs font-bold text-[#789b8c]">
-                  추천 적용 시
+              <div className="mt-2 flex items-center justify-between">
+                <p className="text-xs font-bold text-[#789b8c]">현재 진행률</p>
+                <p className="text-xl font-black text-[#1ba77d]">
+                  {report.goal.progressPercent}%
                 </p>
               </div>
             </div>
-          </div>
 
-          <div className="mt-6 rounded-2xl border border-[#eef3f0] bg-white p-5">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-black">ESG 자가진단 점수</h2>
-              <span className="rounded-full bg-[#fbe7c8] px-3 py-1 text-xs font-black text-[#9a5b1f]">
-                {report.esgStatusLabel}
-              </span>
-            </div>
-            <div className="mt-5 grid grid-cols-3 gap-2 text-center">
-              {report.esgScores.map((esg) => (
-                <div key={esg.label} className="flex flex-col items-center">
-                  <ScoreRing score={esg.score} colorHex={esg.ringColorHex} />
-                  <p className="mt-2 text-sm font-bold text-[#789b8c]">
-                    {esg.label}
+            <div className="mt-6 rounded-2xl border border-[#eef3f0] bg-white p-5">
+              <h2 className="text-base font-black">절감 비용</h2>
+              <p className="mt-1 text-xs font-bold text-[#789b8c]">
+                절감을 통해 아낄 수 있는 예상 비용이에요 ·{" "}
+                {report.costSavings.label}
+              </p>
+
+              <div className="mt-4 flex items-center rounded-2xl bg-[#f2f6f3] py-4">
+                <div className="flex-1 text-center">
+                  <p className="text-xs font-bold text-[#789b8c]">현재</p>
+                  <p className="mt-1 text-2xl font-black">
+                    {report.costSavings.currentAnnualCostLabel}
+                  </p>
+                  <p className="text-xs font-bold text-[#789b8c]">
+                    {report.costSavings.unitLabel}
                   </p>
                 </div>
-              ))}
+                <div aria-hidden="true" className="h-12 w-px bg-[#d8e7e0]" />
+                <div className="flex-1 text-center">
+                  <p className="text-xs font-bold text-[#789b8c]">
+                    절감 후 예상
+                  </p>
+                  <p className="mt-1 text-2xl font-black text-[#1ba77d]">
+                    {report.costSavings.projectedAnnualCostLabel}
+                  </p>
+                  <p className="text-xs font-bold text-[#789b8c]">
+                    {report.costSavings.unitLabel}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-2xl bg-[#eef8f3] px-4 py-3">
+                <p className="text-sm font-black text-[#0d5f4b]">
+                  💰 {report.costSavings.annualSavingsLabel}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-[#eef3f0] bg-white p-5">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-black">ESG 자가진단 점수</h2>
+                <span className="rounded-full bg-[#fbe7c8] px-3 py-1 text-xs font-black text-[#9a5b1f]">
+                  {report.esgStatusLabel}
+                </span>
+              </div>
+              <div className="mt-5 grid grid-cols-3 gap-2 text-center">
+                {report.esgScores.map((esg) => (
+                  <div key={esg.label} className="flex flex-col items-center">
+                    <ScoreRing score={esg.score} colorHex={esg.ringColorHex} />
+                    <p className="mt-2 text-sm font-bold text-[#789b8c]">
+                      {esg.label}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -476,14 +822,14 @@ export default function ReportPage() {
             onClick={handleDownload}
             className="mt-8 w-full rounded-2xl bg-[#1ba77d] px-6 py-5 text-xl font-black text-white disabled:opacity-60"
           >
-            {isDownloading ? "PDF 생성 중..." : "리포트 PDF 다운로드 ⬇"}
+            {isDownloading ? "PDF 생성 중..." : "리포트 PDF 다운로드"}
           </button>
 
           <Link
             href="/actions"
             className="mt-3 block w-full rounded-2xl border-2 border-[#1ba77d] bg-white px-6 py-5 text-center text-xl font-black text-[#1ba77d]"
           >
-            감축 액션 추천 보기 →
+            감축 액션 추천 보기
           </Link>
         </section>
       </div>

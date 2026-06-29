@@ -44,4 +44,16 @@ describe("classifyUser", () => {
       zScore: 0,
     });
   });
+
+  it("classifies additional business contract types as 소상공인", () => {
+    expect(
+      classifyUser({ usageKwh: 100, contractType: "사업용" }).userType,
+    ).toBe("소상공인");
+    expect(
+      classifyUser({ usageKwh: 100, contractType: "영업용" }).userType,
+    ).toBe("소상공인");
+    expect(
+      classifyUser({ usageKwh: 100, contractType: "업무용" }).userType,
+    ).toBe("소상공인");
+  });
 });

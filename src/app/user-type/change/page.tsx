@@ -146,7 +146,7 @@ export default function ChangeUserTypePage() {
             className="mt-8 w-full rounded-2xl bg-[#1ba77d] px-6 py-5 text-xl font-black text-white disabled:opacity-50"
             onClick={handleConfirm}
           >
-            이 유형으로 변경하기 →
+            이 유형으로 변경하기
           </button>
         </section>
       </div>

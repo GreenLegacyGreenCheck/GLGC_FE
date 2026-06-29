@@ -7,7 +7,20 @@ export const REFERENCE_MONTHLY_KWH_STDDEV = 120;
 
 const SMALL_BUSINESS_ZSCORE_THRESHOLD = 1.5;
 const VULNERABLE_ZSCORE_THRESHOLD = -1.0;
-const COMMERCIAL_CONTRACT_KEYWORDS = ["일반용", "산업용"];
+const COMMERCIAL_CONTRACT_KEYWORDS = [
+  "일반용",
+  "산업용",
+  "사업용",
+  "영업용",
+  "업무용",
+];
+// Residential contract types (주택용/아파트용/가정용 etc.) intentionally
+// have no forced mapping — they default to 일반가구 via the z-score
+// thresholds below, which still promotes outlier usage to 소상공인/취약계층.
+// 취약계층 has no contract-type signal at all: bills print a welfare
+// -discount eligibility notice on every bill regardless of the customer's
+// actual status, so it isn't a reliable extraction target (see
+// ocr-extract.ts) — usage z-score is the only signal for this category.
 
 export type ClassificationInput = {
   usageKwh: number | null;

@@ -25,6 +25,7 @@ const defaultState: DiagnosisStateOverrides = {
   result: null,
   status: "idle",
   error: null,
+  selectedActionCodes: [],
 };
 
 export function renderWithDiagnosis(
@@ -41,6 +42,7 @@ export function renderWithDiagnosis(
       result: null,
       status: "idle",
       error: null,
+      selectedActionCodes: [],
       ...state,
       setAddress: (address) => setState((current) => ({ ...current, address })),
       setElectricFile: (electricFile) =>
@@ -62,6 +64,8 @@ export function renderWithDiagnosis(
               }
             : current,
         ),
+      setSelectedActionCodes: (selectedActionCodes) =>
+        setState((current) => ({ ...current, selectedActionCodes })),
       reset: () => setState(defaultState),
     };
 

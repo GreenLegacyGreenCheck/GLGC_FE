@@ -23,7 +23,7 @@ const fakeResult: DiagnosisResult = {
     usageM3: { value: null, confidence: 0 },
     contractType: { value: "주택용", confidence: 94.2 },
     supplyAddress: { value: null, confidence: 0 },
-    billedAmount: { value: 42350, confidence: 94.2 },
+    billingMonth: { value: "2026-06", confidence: 94.2 },
   },
   gasOcr: null,
   totalCo2Kg: 137.2,
@@ -31,6 +31,8 @@ const fakeResult: DiagnosisResult = {
   userTypeOverridden: false,
   zScore: 1.8,
   averageOcrConfidence: 94.2,
+  diagnosisId: "diagnosis-1",
+  recommendedActions: [],
 };
 
 const electricFile = new File(["bill"], "electric.png", {
@@ -88,7 +90,7 @@ describe("ChangeUserTypePage", () => {
 
     await user.click(screen.getByRole("button", { name: /일반 가구/ }));
     await user.click(
-      screen.getByRole("button", { name: "이 유형으로 변경하기 →" }),
+      screen.getByRole("button", { name: "이 유형으로 변경하기" }),
     );
 
     expect(push).toHaveBeenCalledWith("/user-type");

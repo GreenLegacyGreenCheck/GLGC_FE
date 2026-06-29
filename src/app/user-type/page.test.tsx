@@ -18,7 +18,7 @@ const fakeResult: DiagnosisResult = {
     usageM3: { value: null, confidence: 0 },
     contractType: { value: "주택용", confidence: 94.2 },
     supplyAddress: { value: null, confidence: 0 },
-    billedAmount: { value: 42350, confidence: 94.2 },
+    billingMonth: { value: "2026-06", confidence: 94.2 },
   },
   gasOcr: {
     rawText: "",
@@ -27,13 +27,15 @@ const fakeResult: DiagnosisResult = {
     usageM3: { value: 45, confidence: 88 },
     contractType: { value: null, confidence: 0 },
     supplyAddress: { value: null, confidence: 0 },
-    billedAmount: { value: 28700, confidence: 88 },
+    billingMonth: { value: "2026-05", confidence: 88 },
   },
   totalCo2Kg: 234.5,
   userType: "소상공인",
   userTypeOverridden: false,
   zScore: 1.8,
   averageOcrConfidence: 91.1,
+  diagnosisId: "diagnosis-1",
+  recommendedActions: [],
 };
 
 const electricFile = new File(["bill"], "electric.png", {
@@ -66,6 +68,30 @@ describe("UserTypePage", () => {
     expect(screen.getByText("91.1%")).toBeInTheDocument();
   });
 
+  it("shows each bill's billing month and usage separately, not merged", () => {
+    renderWithDiagnosis(<UserTypePage />, {
+      electricFile,
+      gasFile,
+      result: fakeResult,
+    });
+
+    expect(screen.getByText("전기 고지서 기준월")).toBeInTheDocument();
+    expect(screen.getByText("2026-06")).toBeInTheDocument();
+    expect(screen.getByText("가스 고지서 기준월")).toBeInTheDocument();
+    expect(screen.getByText("2026-05")).toBeInTheDocument();
+  });
+
+  it("omits the gas billing rows when no gas bill was uploaded", () => {
+    renderWithDiagnosis(<UserTypePage />, {
+      electricFile,
+      gasFile: null,
+      result: fakeResult,
+    });
+
+    expect(screen.queryByText("가스 고지서 기준월")).not.toBeInTheDocument();
+    expect(screen.queryByText("가스 사용량")).not.toBeInTheDocument();
+  });
+
   it("links to the type-change page instead of toggling inline", () => {
     renderWithDiagnosis(<UserTypePage />, {
       electricFile,
@@ -85,7 +111,7 @@ describe("UserTypePage", () => {
     });
 
     expect(
-      screen.getByRole("link", { name: "진단 리포트 보기 →" }),
+      screen.getByRole("link", { name: "진단 리포트 보기" }),
     ).toHaveAttribute("href", "/report");
   });
 });

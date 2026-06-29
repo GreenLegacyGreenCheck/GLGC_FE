@@ -23,6 +23,8 @@ const fakeResult: DiagnosisResult = {
   userTypeOverridden: false,
   zScore: 0,
   averageOcrConfidence: 90,
+  diagnosisId: "diagnosis-1",
+  recommendedActions: [],
 };
 
 describe("AnalyzingPage", () => {
@@ -67,6 +69,11 @@ describe("AnalyzingPage", () => {
     expect(screen.getByText("고지서 OCR 추출")).toBeInTheDocument();
     expect(screen.getByText("AI가 분석하고 있어요...")).toBeInTheDocument();
 
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/user-type"));
+    // Step reveals are paced (STEP_REVEAL_INTERVAL_MS apart) so each step's
+    // pop animation is visible instead of all four jumping at once — the
+    // default waitFor timeout is too short to cover that real delay.
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/user-type"), {
+      timeout: 5000,
+    });
   });
 });

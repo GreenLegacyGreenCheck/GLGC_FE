@@ -25,6 +25,16 @@ const STEPS: { id: PipelineStepId; title: string; subtitle: string }[] = [
   },
 ];
 
+// scope2/classify/report run back-to-back with no real async gap between
+// them, so without pacing, React batches all three step updates into a
+// single render and the user only ever sees step 1 pop — steps 2-4 jump to
+// "done" simultaneously. This queue forces each step reveal onto its own
+// timer tick, spaced far enough apart (> the .step-badge-pop animation
+// duration) that each badge's pop is visible before the next one fires. It
+// never adds delay beyond what's needed: a step that already took longer
+// than this interval (e.g. the OCR network call) reveals immediately.
+const STEP_REVEAL_INTERVAL_MS = 420;
+
 function CheckIcon() {
   return (
     <svg
@@ -64,10 +74,14 @@ export default function AnalyzingPage() {
   const [completedSteps, setCompletedSteps] = useState<Set<PipelineStepId>>(
     new Set(),
   );
+  const [displayPercent, setDisplayPercent] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const hasStartedRef = useRef(false);
   const isMountedRef = useRef(true);
+  const actionQueueRef = useRef<(() => void)[]>([]);
+  const isFlushingRef = useRef(false);
+  const flushTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -75,6 +89,49 @@ export default function AnalyzingPage() {
       isMountedRef.current = false;
     };
   }, []);
+
+  // OCR's network round trip can take anywhere from a couple seconds to a
+  // couple minutes depending on backend load, so a smooth easing curve
+  // (e.g. 1 - e^-t) is the wrong shape here: it converges to its ceiling
+  // within ~10s regardless of tau, then sits visually frozen for however
+  // much longer the real wait drags on — exactly the "stuck" complaint,
+  // just moved from 0% to wherever the ceiling is. Ticking by a fixed +1%
+  // on a growing-but-capped delay guarantees a visible bump at least every
+  // MAX_TICK_DELAY_MS, no matter how long the real step takes, while still
+  // leaving headroom below the next real milestone for that to land on.
+  useEffect(() => {
+    if (completedSteps.size >= STEPS.length) {
+      return;
+    }
+
+    const segmentStart = (completedSteps.size / STEPS.length) * 100;
+    const segmentSize = 100 / STEPS.length;
+    const creepCeiling = segmentStart + segmentSize * 0.94;
+
+    const INITIAL_TICK_DELAY_MS = 700;
+    const MAX_TICK_DELAY_MS = 9000;
+    const TICK_DELAY_GROWTH = 1.35;
+
+    let current = segmentStart;
+    let delay = INITIAL_TICK_DELAY_MS;
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    function tick() {
+      current = Math.min(current + 1, creepCeiling);
+      setDisplayPercent(current);
+
+      if (current >= creepCeiling) {
+        return;
+      }
+
+      delay = Math.min(delay * TICK_DELAY_GROWTH, MAX_TICK_DELAY_MS);
+      timeoutId = setTimeout(tick, delay);
+    }
+
+    timeoutId = setTimeout(tick, delay);
+
+    return () => clearTimeout(timeoutId);
+  }, [completedSteps]);
 
   useEffect(() => {
     if (!electricFile) {
@@ -94,26 +151,70 @@ export default function AnalyzingPage() {
     hasStartedRef.current = true;
     setErrorMessage(null);
 
-    runDiagnosisPipeline({ electricFile, gasFile }, (step) => {
+    function resetStepQueue() {
+      actionQueueRef.current = [];
+      isFlushingRef.current = false;
+
+      if (flushTimeoutRef.current) {
+        clearTimeout(flushTimeoutRef.current);
+        flushTimeoutRef.current = null;
+      }
+    }
+
+    function flushStepQueue() {
+      // Checked here, not via effect cleanup: an effect cleanup that
+      // cancels this timer would also fire during React Strict Mode's
+      // dev-only double-invoke of this same effect, permanently stalling
+      // the queue on the (guarded, single-run) remount — see hasStartedRef.
       if (!isMountedRef.current) {
+        isFlushingRef.current = false;
         return;
       }
 
+      const action = actionQueueRef.current.shift();
+
+      if (!action) {
+        isFlushingRef.current = false;
+        return;
+      }
+
+      action();
+      flushTimeoutRef.current = setTimeout(
+        flushStepQueue,
+        STEP_REVEAL_INTERVAL_MS,
+      );
+    }
+
+    function enqueueStepReveal(action: () => void) {
+      actionQueueRef.current.push(action);
+
+      if (!isFlushingRef.current) {
+        isFlushingRef.current = true;
+        flushStepQueue();
+      }
+    }
+
+    resetStepQueue();
+
+    runDiagnosisPipeline({ electricFile, gasFile }, (step) => {
       const stepIndex = STEPS.findIndex((s) => s.id === step);
 
-      setCompletedSteps(new Set(STEPS.slice(0, stepIndex).map((s) => s.id)));
+      enqueueStepReveal(() => {
+        setCompletedSteps(new Set(STEPS.slice(0, stepIndex).map((s) => s.id)));
+      });
     })
       .then((diagnosisResult) => {
-        if (!isMountedRef.current) {
-          return;
-        }
-
-        setCompletedSteps(new Set(STEPS.map((s) => s.id)));
-        setResult(diagnosisResult);
-        setStatus("done");
-        router.push("/user-type");
+        enqueueStepReveal(() => {
+          setCompletedSteps(new Set(STEPS.map((s) => s.id)));
+        });
+        enqueueStepReveal(() => {
+          setResult(diagnosisResult);
+          setStatus("done");
+          router.push("/user-type");
+        });
       })
       .catch((error: unknown) => {
+        resetStepQueue();
         hasStartedRef.current = false;
 
         if (!isMountedRef.current) {
@@ -129,12 +230,13 @@ export default function AnalyzingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [retryCount]);
 
-  const percent = Math.round((completedSteps.size / STEPS.length) * 100);
+  const confirmedPercent = (completedSteps.size / STEPS.length) * 100;
+  const percent = Math.round(Math.max(confirmedPercent, displayPercent));
   const currentStepIndex = completedSteps.size;
 
   return (
     <>
-      <div className="scrollbar-hidden flex h-screen flex-col items-center justify-center overflow-y-auto overscroll-contain px-8 pb-32 sm:h-full">
+      <div className="scrollbar-hidden flex h-screen flex-col items-center justify-center overflow-y-auto overscroll-contain px-8 pb-32 pt-15.25 sm:h-full">
         {errorMessage ? (
           <div className="text-center">
             <p className="text-lg font-black text-[#13261f]">
@@ -154,6 +256,11 @@ export default function AnalyzingPage() {
         ) : (
           <>
             <div className="relative grid size-40 place-items-center rounded-full">
+              <span className="sprout-pulse-ring absolute inset-0 rounded-full border-2 border-[#1ba77d]" />
+              <span
+                className="sprout-pulse-ring absolute inset-0 rounded-full border-2 border-[#1ba77d]"
+                style={{ animationDelay: "0.9s" }}
+              />
               <svg
                 aria-hidden="true"
                 viewBox="0 0 100 100"
@@ -177,6 +284,7 @@ export default function AnalyzingPage() {
                   strokeLinecap="round"
                   strokeDasharray={2 * Math.PI * 44}
                   strokeDashoffset={2 * Math.PI * 44 * (1 - percent / 100)}
+                  className="transition-[stroke-dashoffset] duration-300 ease-out"
                 />
               </svg>
               <div className="grid size-28 place-items-center rounded-full bg-white shadow-inner">
@@ -184,22 +292,28 @@ export default function AnalyzingPage() {
               </div>
             </div>
 
-            <p className="mt-6 text-4xl font-black text-[#13261f]">
+            <p className="mt-13.75 text-4xl font-black text-[#13261f]">
               {percent}%
             </p>
             <p className="mt-2 text-base font-bold text-[#789b8c]">
               AI가 분석하고 있어요...
             </p>
 
-            <ul className="mt-10 w-full max-w-xs space-y-4">
+            <ul className="mt-10 flex w-full max-w-xs flex-col gap-5">
               {STEPS.map((step, index) => {
                 const isDone = completedSteps.has(step.id);
                 const isCurrent = !isDone && index === currentStepIndex;
+                const badgeStatus = isDone
+                  ? "done"
+                  : isCurrent
+                    ? "current"
+                    : "pending";
 
                 return (
                   <li key={step.id} className="flex items-center gap-3">
                     <span
-                      className={`grid size-9 shrink-0 place-items-center rounded-full text-sm font-black ${
+                      key={badgeStatus}
+                      className={`step-badge-pop grid size-9 shrink-0 place-items-center rounded-full text-sm font-black ${
                         isDone
                           ? "bg-[#1ba77d] text-white"
                           : isCurrent

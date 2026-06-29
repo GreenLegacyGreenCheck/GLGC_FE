@@ -2,15 +2,12 @@
 
 import BottomNavigation from "@/components/BottomNavigation";
 import { useDiagnosis } from "@/context/diagnosis-context";
-import {
-  DUMMY_REDUCTION_ACTIONS,
-  type ActionDifficulty,
-} from "@/lib/reduction-actions";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-const DIFFICULTY_STYLES: Record<ActionDifficulty, string> = {
+const DEFAULT_DIFFICULTY_STYLE = "bg-[#eef3f0] text-[#789b8c]";
+const DIFFICULTY_STYLES: Record<string, string> = {
   쉬움: "bg-[#dff1ea] text-[#1ba77d]",
   중간: "bg-[#fbe7c8] text-[#9a5b1f]",
   어려움: "bg-[#fbdede] text-[#b3433f]",
@@ -48,8 +45,8 @@ function CheckIcon() {
 
 export default function ActionsPage() {
   const router = useRouter();
-  const { electricFile, result } = useDiagnosis();
-  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const { electricFile, result, setSelectedActionCodes } = useDiagnosis();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!electricFile || !result) {
@@ -61,22 +58,29 @@ export default function ActionsPage() {
     return null;
   }
 
-  const toggleAction = (index: number) => {
+  const actions = result.recommendedActions;
+
+  const toggleAction = (code: string) => {
     setSelected((current) => {
       const next = new Set(current);
 
-      if (next.has(index)) {
-        next.delete(index);
+      if (next.has(code)) {
+        next.delete(code);
       } else {
-        next.add(index);
+        next.add(code);
       }
 
       return next;
     });
   };
 
-  const selectedReductionTotal = Array.from(selected).reduce(
-    (sum, index) => sum + DUMMY_REDUCTION_ACTIONS[index].reductionKgPerYear,
+  const selectedActions = actions.filter((action) => selected.has(action.code));
+  const selectedMinTotal = selectedActions.reduce(
+    (sum, action) => sum + action.expectedMinKg,
+    0,
+  );
+  const selectedMaxTotal = selectedActions.reduce(
+    (sum, action) => sum + action.expectedMaxKg,
     0,
   );
 
@@ -97,7 +101,7 @@ export default function ActionsPage() {
         <section className="px-5 py-6">
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-2xl font-black">
-              맞춤 감축 액션 {DUMMY_REDUCTION_ACTIONS.length}가지
+              맞춤 감축 액션 {actions.length}가지
             </h2>
             <span className="shrink-0 rounded-full bg-[#dff1ea] px-3 py-1 text-sm font-black text-[#1ba77d]">
               {result.userType}
@@ -113,28 +117,29 @@ export default function ActionsPage() {
                 {selected.size}개 선택 시 예상 절감
               </span>
               <span className="text-lg font-black text-[#13261f]">
-                -{selectedReductionTotal} kg CO₂/년
+                -{Math.round(selectedMinTotal)}~{Math.round(selectedMaxTotal)}{" "}
+                kg CO₂/년
               </span>
             </div>
           ) : null}
 
           <div className="mt-6 space-y-4">
-            {DUMMY_REDUCTION_ACTIONS.map((action, index) => {
-              const isSelected = selected.has(index);
+            {actions.map((action) => {
+              const isSelected = selected.has(action.code);
 
               return (
                 <button
-                  key={action.title}
+                  key={action.code}
                   type="button"
                   aria-pressed={isSelected}
-                  onClick={() => toggleAction(index)}
+                  onClick={() => toggleAction(action.code)}
                   className={`w-full rounded-2xl border-2 bg-white p-4 text-left transition ${
                     isSelected ? "border-[#1ba77d]" : "border-[#e5eee9]"
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[#eef8f3] text-2xl">
-                      {action.icon}
+                      {action.icon ?? "🌱"}
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
@@ -155,10 +160,14 @@ export default function ActionsPage() {
                       </p>
                       <div className="mt-3 flex flex-wrap gap-2">
                         <span className="rounded-full bg-[#dff1ea] px-3 py-1 text-xs font-black text-[#1ba77d]">
-                          -{action.reductionKgPerYear} kg/년
+                          -{Math.round(action.expectedMinKg)}~
+                          {Math.round(action.expectedMaxKg)} kg/년
                         </span>
                         <span
-                          className={`rounded-full px-3 py-1 text-xs font-black ${DIFFICULTY_STYLES[action.difficulty]}`}
+                          className={`rounded-full px-3 py-1 text-xs font-black ${
+                            DIFFICULTY_STYLES[action.difficulty] ??
+                            DEFAULT_DIFFICULTY_STYLE
+                          }`}
                         >
                           {action.difficulty}
                         </span>
@@ -175,9 +184,10 @@ export default function ActionsPage() {
 
           <Link
             href="/support"
+            onClick={() => setSelectedActionCodes(Array.from(selected))}
             className="mt-8 block w-full rounded-2xl bg-[#1ba77d] px-6 py-5 text-center text-xl font-black text-white"
           >
-            맞춤 지원사업 신청하기 →
+            맞춤 지원사업 신청하기
           </Link>
         </section>
       </div>

@@ -23,11 +23,15 @@ export type EmissionCauseItem = {
 
 export type MonthOverMonthMetric = {
   label: string;
+  icon: string;
   unit: string;
   previousValue: number;
   currentValue: number;
   percentChange: number;
   isIncrease: boolean;
+  accentBorderClass: string;
+  accentTextClass: string;
+  accentBgClass: string;
 };
 
 export type SimulationOption = {
@@ -47,15 +51,37 @@ export type GoalProgress = {
   progressPercent: number;
 };
 
-export type GradePrediction = {
-  currentGrade: string;
-  currentGradeColorClass: string;
+export type GradeBand = {
+  grade: string;
+  minTons: number;
+  maxTons: number;
+  colorClass: string;
+};
+
+export type AiEvidenceBullet = {
+  text: string;
+  isPositive: boolean;
+};
+
+export type EmissionTreeNode = {
+  id: string;
+  label: string;
+  percentage: number;
+  children?: EmissionTreeNode[];
+};
+
+export type TrendScenario = {
+  label: string;
+  months: number;
+  projectedTons: number;
   projectedGrade: string;
   projectedGradeColorClass: string;
+  isWarning: boolean;
 };
 
 export type CostSavings = {
   label: string;
+  unitLabel: string;
   currentAnnualCostLabel: string;
   projectedAnnualCostLabel: string;
   annualSavingsLabel: string;
@@ -71,9 +97,14 @@ export type DiagnosisReportData = {
   industryAverageTons: number;
   ourUsageTons: number;
   zScore: number;
+  percentile: number;
   percentileMessage: string;
+  gradeBands: GradeBand[];
+  emissionTree: EmissionTreeNode;
   emissionCauses: EmissionCauseItem[];
+  aiEvidenceBullets: AiEvidenceBullet[];
   monthOverMonth: MonthOverMonthMetric[];
+  trendScenarios: TrendScenario[];
   simulationLabel: string;
   simulationOptions: SimulationOption[];
   energyBreakdown: EnergyBreakdownItem[];
@@ -81,7 +112,6 @@ export type DiagnosisReportData = {
   esgScores: EsgScoreItem[];
   aiSummary: AiSummaryPart[];
   goal: GoalProgress;
-  gradePrediction: GradePrediction;
   costSavings: CostSavings;
 };
 
@@ -95,28 +125,65 @@ export const DUMMY_REPORT: DiagnosisReportData = {
   industryAverageTons: 2.36,
   ourUsageTons: 2.84,
   zScore: 0.73,
+  percentile: 23,
   percentileMessage: "동종업 상위 23%에 해당해요. 감축 액션이 필요해요.",
+  gradeBands: [
+    { grade: "A", minTons: 0, maxTons: 1.5, colorClass: "bg-[#1ba77d]" },
+    { grade: "B", minTons: 1.5, maxTons: 2.3, colorClass: "bg-[#7bc9a6]" },
+    { grade: "C", minTons: 2.3, maxTons: 3.0, colorClass: "bg-[#e0a23a]" },
+    { grade: "D", minTons: 3.0, maxTons: 4.0, colorClass: "bg-[#d9764a]" },
+  ],
+  emissionTree: {
+    id: "root",
+    label: "총 배출량",
+    percentage: 100,
+    children: [
+      {
+        id: "electricity",
+        label: "전기",
+        percentage: 69,
+        children: [
+          { id: "cooling", label: "냉방기기", percentage: 32 },
+          { id: "lighting-etc", label: "조명·기타", percentage: 37 },
+        ],
+      },
+      { id: "gas", label: "가스", percentage: 31 },
+    ],
+  },
   emissionCauses: [
     { rank: 1, label: "전기 사용량", percentChange: 42 },
     { rank: 2, label: "냉방기 사용", percentChange: 18 },
     { rank: 3, label: "가스 사용량", percentChange: 11 },
   ],
+  aiEvidenceBullets: [
+    { text: "동종업 평균보다 전기 사용량 27% 높음", isPositive: false },
+    { text: "냉방 사용 비중 평균 대비 +18%", isPositive: false },
+    { text: "가스 사용량은 평균 수준", isPositive: true },
+  ],
   monthOverMonth: [
     {
       label: "전기",
+      icon: "⚡",
       unit: "kWh",
       previousValue: 306,
       currentValue: 330,
       percentChange: 7.9,
       isIncrease: true,
+      accentBorderClass: "border-[#bfe9da]",
+      accentTextClass: "text-[#1ba77d]",
+      accentBgClass: "bg-[#1ba77d]",
     },
     {
       label: "탄소배출량",
+      icon: "🌀",
       unit: "tCO₂e",
       previousValue: 2.51,
       currentValue: 2.84,
       percentChange: 13,
       isIncrease: true,
+      accentBorderClass: "border-[#f1c9a6]",
+      accentTextClass: "text-[#e0a23a]",
+      accentBgClass: "bg-[#e0a23a]",
     },
   ],
   simulationLabel: "에어컨 온도를 높이면",
@@ -159,16 +226,29 @@ export const DUMMY_REPORT: DiagnosisReportData = {
     targetTons: 2.5,
     progressPercent: 48,
   },
-  gradePrediction: {
-    currentGrade: "C",
-    currentGradeColorClass: "bg-[#e0a23a]",
-    projectedGrade: "B",
-    projectedGradeColorClass: "bg-[#1ba77d]",
-  },
+  trendScenarios: [
+    {
+      label: "현재 추세 유지 시",
+      months: 3,
+      projectedTons: 3.02,
+      projectedGrade: "D",
+      projectedGradeColorClass: "bg-[#d9764a]",
+      isWarning: true,
+    },
+    {
+      label: "추천 액션 적용 시",
+      months: 3,
+      projectedTons: 2.5,
+      projectedGrade: "B",
+      projectedGradeColorClass: "bg-[#1ba77d]",
+      isWarning: false,
+    },
+  ],
   costSavings: {
     label: "예상 전기요금",
-    currentAnnualCostLabel: "74만원/년",
-    projectedAnnualCostLabel: "66만원/년",
+    unitLabel: "/ 년",
+    currentAnnualCostLabel: "74만원",
+    projectedAnnualCostLabel: "66만원",
     annualSavingsLabel: "연간 약 8만원 절감",
   },
 };

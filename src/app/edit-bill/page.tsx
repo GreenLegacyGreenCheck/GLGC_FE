@@ -27,18 +27,6 @@ function toDigitsAndDot(raw: string) {
   return raw.replace(/[^0-9.]/g, "");
 }
 
-function toAmountDisplay(raw: string) {
-  const digits = raw.replace(/[^0-9]/g, "");
-
-  return digits ? Number(digits).toLocaleString("ko-KR") : "";
-}
-
-function parseAmount(raw: string): number | null {
-  const digits = raw.replace(/[^0-9]/g, "");
-
-  return digits ? Number(digits) : null;
-}
-
 function parseUsage(raw: string): number | null {
   return raw ? Number(raw) : null;
 }
@@ -92,20 +80,13 @@ export default function EditBillPage() {
   const [electricUsage, setElectricUsage] = useState(
     result?.electricOcr?.usageKwh.value?.toString() ?? "",
   );
-  const [electricAmount, setElectricAmount] = useState(
-    result?.electricOcr?.billedAmount.value !== null &&
-      result?.electricOcr?.billedAmount.value !== undefined
-      ? result.electricOcr.billedAmount.value.toLocaleString("ko-KR")
-      : "",
-  );
   const [gasUsage, setGasUsage] = useState(
     result?.gasOcr?.usageM3.value?.toString() ?? "",
   );
-  const [gasAmount, setGasAmount] = useState(
-    result?.gasOcr?.billedAmount.value !== null &&
-      result?.gasOcr?.billedAmount.value !== undefined
-      ? result.gasOcr.billedAmount.value.toLocaleString("ko-KR")
-      : "",
+  const [billingMonthInput, setBillingMonthInput] = useState(
+    result?.electricOcr?.billingMonth.value ??
+      result?.gasOcr?.billingMonth.value ??
+      "",
   );
 
   if (!result || !result.electricOcr) {
@@ -116,9 +97,8 @@ export default function EditBillPage() {
 
   const handleSave = () => {
     const newElectricUsage = parseUsage(electricUsage);
-    const newElectricAmount = parseAmount(electricAmount);
     const newGasUsage = gasFile ? parseUsage(gasUsage) : null;
-    const newGasAmount = gasFile ? parseAmount(gasAmount) : null;
+    const newBillingMonth = billingMonthInput.trim() || null;
 
     const electricOcr = {
       ...existingElectricOcr,
@@ -126,9 +106,9 @@ export default function EditBillPage() {
         value: newElectricUsage,
         confidence: newElectricUsage !== null ? 100 : 0,
       },
-      billedAmount: {
-        value: newElectricAmount,
-        confidence: newElectricAmount !== null ? 100 : 0,
+      billingMonth: {
+        value: newBillingMonth,
+        confidence: newBillingMonth !== null ? 100 : 0,
       },
     };
 
@@ -140,9 +120,9 @@ export default function EditBillPage() {
               value: newGasUsage,
               confidence: newGasUsage !== null ? 100 : 0,
             },
-            billedAmount: {
-              value: newGasAmount,
-              confidence: newGasAmount !== null ? 100 : 0,
+            billingMonth: {
+              value: newBillingMonth,
+              confidence: newBillingMonth !== null ? 100 : 0,
             },
           }
         : result.gasOcr;
@@ -210,13 +190,6 @@ export default function EditBillPage() {
               value={electricUsage}
               onChange={(value) => setElectricUsage(toDigitsAndDot(value))}
             />
-            <BillField
-              label="전기 요금"
-              unit="원"
-              inputMode="numeric"
-              value={electricAmount}
-              onChange={(value) => setElectricAmount(toAmountDisplay(value))}
-            />
           </div>
 
           {gasFile ? (
@@ -229,13 +202,6 @@ export default function EditBillPage() {
                 inputMode="decimal"
                 value={gasUsage}
                 onChange={(value) => setGasUsage(toDigitsAndDot(value))}
-              />
-              <BillField
-                label="가스 요금"
-                unit="원"
-                inputMode="numeric"
-                value={gasAmount}
-                onChange={(value) => setGasAmount(toAmountDisplay(value))}
               />
             </div>
           ) : null}
@@ -252,6 +218,17 @@ export default function EditBillPage() {
                 onChange={(event) => setAddressInput(event.target.value)}
               />
             </div>
+
+            <div className="mt-5">
+              <label className="block text-sm font-black">고지서 기준월</label>
+              <input
+                className="mt-2 h-14 w-full rounded-2xl bg-[#f3f8f5] px-5 text-base font-bold outline-none focus:ring-4 focus:ring-[#1ba77d]/10"
+                aria-label="고지서 기준월"
+                placeholder="예) 2026-06"
+                value={billingMonthInput}
+                onChange={(event) => setBillingMonthInput(event.target.value)}
+              />
+            </div>
           </div>
 
           <button
@@ -259,7 +236,7 @@ export default function EditBillPage() {
             className="mt-8 w-full rounded-2xl bg-[#1ba77d] px-6 py-5 text-xl font-black text-white"
             onClick={handleSave}
           >
-            저장하고 계속하기 →
+            저장하고 계속하기
           </button>
         </section>
       </div>
