@@ -602,7 +602,13 @@ function AddressInput({ value, onChange }: AddressInputProps) {
 
 export default function UploadPage() {
   const router = useRouter();
-  const { setAddress, setElectricFile, setGasFile, setStatus } = useDiagnosis();
+  const {
+    setAddress,
+    setElectricFile,
+    setGasFile,
+    setStatus,
+    setEsgSurveyAnswers,
+  } = useDiagnosis();
   const [electricFile, setLocalElectricFile] = useState<File | null>(null);
   const [gasFile, setLocalGasFile] = useState<File | null>(null);
   const [address, setLocalAddress] = useState("");
@@ -616,6 +622,9 @@ export default function UploadPage() {
     setGasFile(gasFile);
     setAddress(address);
     setStatus("running");
+    // 새 진단을 시작할 때마다 ESG 설문도 매번 다시 받아야 하므로, 이전
+    // 진단에서 답했던 응답이 남아있지 않도록 초기화한다.
+    setEsgSurveyAnswers(null);
     router.push("/analyzing");
   };
 

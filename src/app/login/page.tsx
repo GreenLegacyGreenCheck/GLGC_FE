@@ -1,8 +1,13 @@
 "use client";
 
 import BottomNavigation from "@/components/BottomNavigation";
-import { ChatIcon, LightbulbIcon } from "@/components/icons";
+import { LightbulbIcon } from "@/components/icons";
+import Image from "next/image";
+import { useAuth } from "@/context/auth-context";
+import { login, signup } from "@/lib/auth-api";
+import { getGoogleAuthorizeUrl, getKakaoAuthorizeUrl } from "@/lib/oauth-urls";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 type AuthMode = "login" | "signup";
@@ -46,24 +51,44 @@ function GoogleIcon() {
 }
 
 export default function LoginPage() {
+  const router = useRouter();
+  const auth = useAuth();
   const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [comingSoonMessage, setComingSoonMessage] = useState<string | null>(
-    null,
-  );
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const title = mode === "login" ? "로그인" : "회원가입";
+  const kakaoAuthorizeUrl = getKakaoAuthorizeUrl();
+  const googleAuthorizeUrl = getGoogleAuthorizeUrl();
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setComingSoonMessage(`${title} 기능은 준비 중이에요`);
+    setErrorMessage(null);
+    setIsSubmitting(true);
+
+    try {
+      const { token, user } =
+        mode === "login"
+          ? await login({ email, password })
+          : await signup({ email, password });
+
+      auth.login(token, user);
+      router.push("/mypage");
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "요청이 실패했어요.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <>
       <div className="scrollbar-hidden h-screen overflow-y-auto overscroll-contain pb-32 sm:h-full">
-        <header className="flex items-center gap-4 border-b border-[#e5eee9] bg-[#f2faf6] px-5 py-6">
+        <header className="sticky top-0 z-10 flex items-center gap-4 border-b border-[#e5eee9] bg-[#f2faf6] px-5 py-6">
           <Link
             href="/"
             className="grid size-10 place-items-center rounded-full border border-[#c9eee4] bg-white text-[#13261f]"
@@ -71,7 +96,7 @@ export default function LoginPage() {
           >
             <ChevronLeftIcon />
           </Link>
-          <h1 className="text-xl font-black">{title}</h1>
+          <h1 className="ml-3 text-xl font-black">{title}</h1>
         </header>
 
         <section className="px-5 py-6">
@@ -93,7 +118,7 @@ export default function LoginPage() {
               aria-pressed={mode === "login"}
               onClick={() => {
                 setMode("login");
-                setComingSoonMessage(null);
+                setErrorMessage(null);
               }}
               className={`flex-1 rounded-xl py-3 text-base font-black ${
                 mode === "login"
@@ -108,7 +133,7 @@ export default function LoginPage() {
               aria-pressed={mode === "signup"}
               onClick={() => {
                 setMode("signup");
-                setComingSoonMessage(null);
+                setErrorMessage(null);
               }}
               className={`flex-1 rounded-xl py-3 text-base font-black ${
                 mode === "signup"
@@ -120,7 +145,7 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <form className="mt-6" onSubmit={handleSubmit}>
+          <form className="mt-6" onSubmit={(event) => void handleSubmit(event)}>
             <label className="block text-sm font-black" htmlFor="login-email">
               이메일
             </label>
@@ -153,15 +178,16 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              className="mt-6 w-full rounded-2xl bg-[#1ba77d] py-4 text-base font-black text-white"
+              disabled={isSubmitting}
+              className="mt-6 w-full rounded-2xl bg-[#1ba77d] py-4 text-base font-black text-white disabled:opacity-60"
             >
-              {title}
+              {isSubmitting ? "처리 중..." : title}
             </button>
           </form>
 
-          {comingSoonMessage ? (
-            <p className="mt-3 text-center text-xs font-bold text-[#789b8c]">
-              {comingSoonMessage}
+          {errorMessage ? (
+            <p className="mt-3 text-center text-xs font-bold text-[#e0473e]">
+              {errorMessage}
             </p>
           ) : null}
 
@@ -173,26 +199,43 @@ export default function LoginPage() {
             <div className="h-px flex-1 bg-[#e0eae4]" />
           </div>
 
-          <button
-            type="button"
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#fee500] py-4 text-base font-black text-[#13261f]"
-            onClick={() =>
-              setComingSoonMessage("카카오 로그인 기능은 준비 중이에요")
-            }
-          >
-            <ChatIcon className="size-5" />
-            카카오로 계속하기
-          </button>
-          <button
-            type="button"
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-[#e5eee9] bg-white py-4 text-base font-black text-[#13261f]"
-            onClick={() =>
-              setComingSoonMessage("Google 로그인 기능은 준비 중이에요")
-            }
-          >
-            <GoogleIcon />
-            Google로 계속하기
-          </button>
+          {kakaoAuthorizeUrl ? (
+            <a
+              href={kakaoAuthorizeUrl}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#fee500] py-4 text-base font-black text-[#13261f]"
+            >
+              <Image src="/images/kakao.png" alt="" width={20} height={20} />
+              카카오로 계속하기
+            </a>
+          ) : (
+            <button
+              type="button"
+              disabled
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#fee500] py-4 text-base font-black text-[#13261f] opacity-60"
+            >
+              <Image src="/images/kakao.png" alt="" width={20} height={20} />
+              카카오로 계속하기
+            </button>
+          )}
+
+          {googleAuthorizeUrl ? (
+            <a
+              href={googleAuthorizeUrl}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-[#e5eee9] bg-white py-4 text-base font-black text-[#13261f]"
+            >
+              <GoogleIcon />
+              Google로 계속하기
+            </a>
+          ) : (
+            <button
+              type="button"
+              disabled
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-[#e5eee9] bg-white py-4 text-base font-black text-[#13261f] opacity-60"
+            >
+              <GoogleIcon />
+              Google로 계속하기
+            </button>
+          )}
         </section>
       </div>
 

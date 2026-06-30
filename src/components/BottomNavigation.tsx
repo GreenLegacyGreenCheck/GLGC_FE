@@ -1,6 +1,7 @@
 "use client";
 
 import { HomeIcon, ListIcon, UserIcon } from "@/components/icons";
+import { useAuth } from "@/context/auth-context";
 import { useDiagnosis } from "@/context/diagnosis-context";
 
 type BottomNavigationProps = {
@@ -11,6 +12,7 @@ export default function BottomNavigation({
   activeLabel = "홈",
 }: BottomNavigationProps) {
   const { result } = useDiagnosis();
+  const { token } = useAuth();
 
   const tabs = [
     { icon: HomeIcon, label: "홈", href: "/" },
@@ -21,7 +23,8 @@ export default function BottomNavigation({
       label: "진단 리포트",
       href: result ? "/report" : "/upload",
     },
-    { icon: UserIcon, label: "마이페이지", href: "/mypage" },
+    // 비로그인 상태면 비회원용 마이페이지 대신 로그인 페이지로 바로 보낸다.
+    { icon: UserIcon, label: "마이페이지", href: token ? "/mypage" : "/login" },
   ];
 
   return (

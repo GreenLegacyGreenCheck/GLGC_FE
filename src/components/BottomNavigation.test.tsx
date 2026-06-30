@@ -1,6 +1,7 @@
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { DiagnosisResult } from "@/context/diagnosis-context";
+import { renderWithAuth } from "@/context/auth-test-utils";
 import { renderWithDiagnosis } from "@/context/diagnosis-test-utils";
 import BottomNavigation from "./BottomNavigation";
 
@@ -36,12 +37,21 @@ describe("BottomNavigation", () => {
     );
   });
 
-  it("links the mypage tab to /mypage", () => {
-    renderWithDiagnosis(<BottomNavigation />, { result: null });
+  it("links the mypage tab to /mypage when logged in", () => {
+    renderWithAuth(<BottomNavigation />, { token: "fake-token" });
 
     expect(screen.getByRole("link", { name: /마이페이지/ })).toHaveAttribute(
       "href",
       "/mypage",
+    );
+  });
+
+  it("links the mypage tab to /login when logged out", () => {
+    renderWithAuth(<BottomNavigation />, { token: null });
+
+    expect(screen.getByRole("link", { name: /마이페이지/ })).toHaveAttribute(
+      "href",
+      "/login",
     );
   });
 });

@@ -46,7 +46,8 @@ function CheckIcon() {
 
 export default function ActionsPage() {
   const router = useRouter();
-  const { result, isHydrated, setSelectedActionCodes } = useDiagnosis();
+  const { result, isHydrated, setSelectedActionCodes, aiActionReasons } =
+    useDiagnosis();
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -161,6 +162,11 @@ export default function ActionsPage() {
                       <p className="mt-1 text-sm font-bold text-[#789b8c]">
                         {action.description}
                       </p>
+                      {aiActionReasons?.[action.code] ? (
+                        <p className="mt-2 rounded-xl bg-[#eef8f3] px-3 py-2 text-xs font-bold text-[#0d5f4b]">
+                          ✦ {aiActionReasons[action.code]}
+                        </p>
+                      ) : null}
                       <div className="mt-3 flex flex-wrap gap-2">
                         <span className="rounded-full bg-[#dff1ea] px-3 py-1 text-xs font-black text-[#1ba77d]">
                           -{Math.round(action.expectedMinKg)}~

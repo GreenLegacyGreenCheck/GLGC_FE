@@ -1,8 +1,14 @@
 "use client";
 
 import BottomNavigation from "@/components/BottomNavigation";
+import { useAuth } from "@/context/auth-context";
+import {
+  getNotificationSettings,
+  updateNotificationSettings,
+  type NotificationSettings,
+} from "@/lib/users-api";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function ChevronLeftIcon() {
   return (
@@ -48,67 +54,90 @@ function Toggle({
   );
 }
 
-type NotifId = "diagnosis" | "weekly" | "goal" | "update";
+type NotifId = keyof NotificationSettings;
 
 const NOTIF_SETTINGS: {
   id: NotifId;
   label: string;
   description: string;
-  defaultOn: boolean;
 }[] = [
   {
-    id: "diagnosis",
+    id: "diagnosisAlert",
     label: "진단 완료 알림",
     description: "탄소 진단이 완료되면 알려드려요",
-    defaultOn: true,
   },
   {
-    id: "weekly",
+    id: "weeklyReport",
     label: "주간 리포트 알림",
     description: "매주 탄소 배출 요약 리포트를 보내드려요",
-    defaultOn: true,
   },
   {
-    id: "goal",
+    id: "goalAlert",
     label: "절감 목표 달성 알림",
     description: "절감 목표에 가까워지면 알려드려요",
-    defaultOn: false,
   },
   {
-    id: "update",
+    id: "appUpdate",
     label: "앱 업데이트 알림",
     description: "새 기능이 추가되면 알려드려요",
-    defaultOn: false,
   },
 ];
 
-export default function NotificationsPage() {
-  const [settings, setSettings] = useState<Record<NotifId, boolean>>(
-    Object.fromEntries(
-      NOTIF_SETTINGS.map((s) => [s.id, s.defaultOn]),
-    ) as Record<NotifId, boolean>,
-  );
+const DEFAULT_SETTINGS: NotificationSettings = {
+  diagnosisAlert: true,
+  weeklyReport: true,
+  goalAlert: false,
+  appUpdate: false,
+};
 
-  const toggle = (id: NotifId) =>
-    setSettings((prev) => ({ ...prev, [id]: !prev[id] }));
+export default function NotificationsPage() {
+  const auth = useAuth();
+  const [settings, setSettings] =
+    useState<NotificationSettings>(DEFAULT_SETTINGS);
+
+  useEffect(() => {
+    if (!auth.isHydrated || !auth.token) {
+      return;
+    }
+
+    getNotificationSettings(auth.token)
+      .then((result) => setSettings(result))
+      .catch(() => {});
+  }, [auth.isHydrated, auth.token]);
+
+  const toggle = (id: NotifId) => {
+    const nextValue = !settings[id];
+    setSettings((prev) => ({ ...prev, [id]: nextValue }));
+
+    if (!auth.token) {
+      return;
+    }
+
+    updateNotificationSettings(auth.token, { [id]: nextValue }).catch(() => {
+      // 저장 실패 시 화면 상태를 원래대로 되돌린다.
+      setSettings((prev) => ({ ...prev, [id]: !nextValue }));
+    });
+  };
 
   return (
     <>
       <div className="scrollbar-hidden h-screen overflow-y-auto overscroll-contain pb-32 sm:h-full">
-        <header className="flex items-center gap-4 border-b border-[#e5eee9] bg-[#f2faf6] px-5 py-6">
+        <header className="sticky top-0 z-10 flex items-center gap-4 border-b border-[#e5eee9] bg-[#f2faf6] px-5 py-6">
           <Link
-            href="/mypage"
+            href="/mypage?tab=settings"
             className="grid size-10 place-items-center rounded-full border border-[#c9eee4] bg-white text-[#13261f]"
             aria-label="마이페이지로 돌아가기"
           >
             <ChevronLeftIcon />
           </Link>
-          <h1 className="text-xl font-black">알림 설정</h1>
+          <h1 className="ml-3 text-xl font-black">알림 설정</h1>
         </header>
 
         <section className="px-5 py-6">
           <p className="text-sm font-bold text-[#789b8c]">
-            알림을 허용하면 중요한 진단 결과와 인사이트를 놓치지 않을 수 있어요.
+            {auth.user
+              ? "알림을 허용하면 중요한 진단 결과와 인사이트를 놓치지 않을 수 있어요."
+              : "로그인하면 알림 설정이 계정에 저장돼요. 지금은 이 기기에서만 적용돼요."}
           </p>
 
           <div className="mt-6 divide-y divide-[#eef3f0] rounded-2xl border border-[#eef3f0] bg-white">

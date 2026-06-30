@@ -6,13 +6,15 @@ import { classifyUser } from "./classification";
 import { createDiagnosis } from "./diagnosis-api";
 import { recognizeBillImage } from "./ocr";
 import { extractBillFields } from "./ocr-extract";
-import { calculateScope2 } from "./scope2";
+import { calculateScope2, toGasMegajoules } from "./scope2";
 
 export type PipelineStepId = "ocr" | "scope2" | "classify" | "report";
 
 export type PipelineInput = {
   electricFile: File;
   gasFile: File | null;
+  address?: string;
+  token?: string | null;
 };
 
 async function recognizeAndExtract(file: File): Promise<OcrExtraction> {
@@ -22,7 +24,7 @@ async function recognizeAndExtract(file: File): Promise<OcrExtraction> {
 }
 
 export async function runDiagnosisPipeline(
-  { electricFile, gasFile }: PipelineInput,
+  { electricFile, gasFile, address, token }: PipelineInput,
   onProgress: (step: PipelineStepId) => void,
 ): Promise<DiagnosisResult> {
   onProgress("ocr");
@@ -63,13 +65,27 @@ export async function runDiagnosisPipeline(
     contractType: electricOcr.contractType.value,
   });
 
-  const { diagnosisId, recommendedActions } = await createDiagnosis({
-    target: userType,
-    electricityRatio:
-      scope2.totalCo2Kg > 0 ? scope2.electricityCo2Kg / scope2.totalCo2Kg : 0,
-    gasRatio: scope2.totalCo2Kg > 0 ? scope2.gasCo2Kg / scope2.totalCo2Kg : 0,
-    targetEmissionKg: scope2.totalCo2Kg,
-  });
+  const billingMonth =
+    electricOcr.billingMonth.value ?? gasOcr?.billingMonth.value ?? null;
+
+  const { diagnosisId, recommendedActions } = await createDiagnosis(
+    {
+      target: userType,
+      electricityRatio:
+        scope2.totalCo2Kg > 0 ? scope2.electricityCo2Kg / scope2.totalCo2Kg : 0,
+      gasRatio: scope2.totalCo2Kg > 0 ? scope2.gasCo2Kg / scope2.totalCo2Kg : 0,
+      targetEmissionKg: scope2.totalCo2Kg,
+      ...(address ? { address } : {}),
+      ...(electricOcr.usageKwh.value !== null
+        ? { usageKwh: electricOcr.usageKwh.value }
+        : {}),
+      ...(gasOcr?.usageM3.value != null
+        ? { gasUsageMj: toGasMegajoules(gasOcr.usageM3.value) ?? undefined }
+        : {}),
+      ...(billingMonth ? { billingMonth } : {}),
+    },
+    token,
+  );
 
   onProgress("report");
 
@@ -93,8 +109,6 @@ export async function runDiagnosisPipeline(
         matchedConfidences.length
       : 0;
 
-  const billingMonth =
-    electricOcr.billingMonth.value ?? gasOcr?.billingMonth.value ?? null;
   const [billingYear, billingMonthNumber] = billingMonth
     ? billingMonth.split("-")
     : [null, null];

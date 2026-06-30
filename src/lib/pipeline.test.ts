@@ -55,7 +55,31 @@ describe("runDiagnosisPipeline", () => {
       expect.objectContaining({
         target: "소상공인",
         targetEmissionKg: result.totalCo2Kg,
+        usageKwh: 287,
+        billingMonth: "2024-03",
       }),
+      undefined,
+    );
+  });
+
+  it("forwards the address and auth token through to createDiagnosis", async () => {
+    const electricFile = new File(["bill"], "electric.png", {
+      type: "image/png",
+    });
+
+    await runDiagnosisPipeline(
+      {
+        electricFile,
+        gasFile: null,
+        address: "서울 마포구",
+        token: "jwt-token",
+      },
+      () => undefined,
+    );
+
+    expect(createDiagnosis).toHaveBeenCalledWith(
+      expect.objectContaining({ address: "서울 마포구" }),
+      "jwt-token",
     );
   });
 

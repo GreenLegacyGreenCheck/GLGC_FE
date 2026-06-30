@@ -37,22 +37,18 @@ export default function TermsPage() {
   return (
     <>
       <div className="scrollbar-hidden h-screen overflow-y-auto overscroll-contain pb-32 sm:h-full">
-        <header className="flex items-center gap-4 border-b border-[#e5eee9] bg-[#f2faf6] px-5 py-6">
+        <header className="sticky top-0 z-10 flex items-center gap-4 border-b border-[#e5eee9] bg-[#f2faf6] px-5 py-6">
           <Link
-            href="/mypage"
+            href="/mypage?tab=settings"
             className="grid size-10 place-items-center rounded-full border border-[#c9eee4] bg-white text-[#13261f]"
             aria-label="마이페이지로 돌아가기"
           >
             <ChevronLeftIcon />
           </Link>
-          <h1 className="text-xl font-black">이용약관</h1>
+          <h1 className="ml-3 text-xl font-black">이용약관</h1>
         </header>
 
         <section className="px-5 py-6">
-          <p className="text-xs font-bold text-[#9aa6a1]">
-            시행일: 2025년 1월 1일
-          </p>
-
           <Section title="제1조 목적">
             <p>
               이 약관은 GreenCheck(이하 서비스)가 제공하는 기후·에너지 자가진단
@@ -119,12 +115,6 @@ export default function TermsPage() {
               협의가 이루어지지 않을 경우 관련 법령에 따른 절차를 따릅니다.
             </p>
           </Section>
-
-          <div className="mt-8 rounded-2xl bg-[#f2faf6] p-4">
-            <p className="text-xs font-bold text-[#789b8c]">
-              부칙: 이 약관은 2025년 1월 1일부터 시행합니다.
-            </p>
-          </div>
         </section>
       </div>
 

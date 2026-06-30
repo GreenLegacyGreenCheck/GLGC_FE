@@ -1,6 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { AuthProvider } from "@/context/auth-context";
 import { DiagnosisProvider } from "@/context/diagnosis-context";
 import UploadPage from "./page";
 
@@ -13,9 +14,11 @@ vi.mock("next/navigation", () => ({
 function renderUploadPage() {
   return render(
     <div data-phone-frame>
-      <DiagnosisProvider>
-        <UploadPage />
-      </DiagnosisProvider>
+      <AuthProvider>
+        <DiagnosisProvider>
+          <UploadPage />
+        </DiagnosisProvider>
+      </AuthProvider>
     </div>,
   );
 }
@@ -105,6 +108,44 @@ describe("UploadPage", () => {
     expect(submitButton).not.toBeDisabled();
     await user.click(submitButton);
     expect(push).toHaveBeenCalledWith("/analyzing");
+
+    createObjectURL.mockRestore();
+    revokeObjectURL.mockRestore();
+  });
+
+  it("clears any previous ESG survey answers when starting a new diagnosis", async () => {
+    window.sessionStorage.setItem(
+      "glgc-diagnosis",
+      JSON.stringify({
+        address: "",
+        result: null,
+        selectedActionCodes: [],
+        esgSurveyAnswers: { "energy-saving": 4 },
+      }),
+    );
+
+    const user = userEvent.setup();
+    const createObjectURL = vi
+      .spyOn(URL, "createObjectURL")
+      .mockReturnValue("blob:bill-preview");
+    const revokeObjectURL = vi
+      .spyOn(URL, "revokeObjectURL")
+      .mockImplementation(() => undefined);
+
+    renderUploadPage();
+    await user.click(
+      screen.getByRole("button", { name: /사진 찍기 또는 파일 첨부/ }),
+    );
+    const file = new File(["bill"], "bill.png", { type: "image/png" });
+    await user.upload(screen.getByLabelText("전기 고지서 갤러리 선택"), file);
+    await user.click(screen.getByRole("button", { name: "분석 시작하기" }));
+
+    await waitFor(() => {
+      const persisted = JSON.parse(
+        window.sessionStorage.getItem("glgc-diagnosis") ?? "{}",
+      );
+      expect(persisted.esgSurveyAnswers).toBeNull();
+    });
 
     createObjectURL.mockRestore();
     revokeObjectURL.mockRestore();

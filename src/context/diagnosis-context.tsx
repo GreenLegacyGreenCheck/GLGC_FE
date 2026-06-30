@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import type { EsgSurveyAnswers } from "@/lib/esg-survey";
 
 export type UserType = "소상공인" | "일반가구" | "취약계층";
 
@@ -58,6 +59,13 @@ type DiagnosisState = {
   // 로컬 state라 페이지 이동 시 사라지므로, 어떤 액션의 정책을 조회해야
   // 하는지 알려주려면 context에 들고 있어야 한다.
   selectedActionCodes: string[];
+  // /analyzing에서 대기 시간에 받은 ESG 자가진단 설문 응답. 완주했을 때만
+  // 채워지며, /report가 이 값이 있으면 더미 esgScores 대신 실제 응답 기반
+  // 점수를 보여준다.
+  esgSurveyAnswers: EsgSurveyAnswers | null;
+  // /report에서 XGBoost 결과로 AI 인사이트를 받으면 여기 저장한다.
+  // /actions 페이지가 이 값을 읽어 각 액션 카드에 개인화 이유를 보여준다.
+  aiActionReasons: Record<string, string> | null;
 };
 
 const initialState: DiagnosisState = {
@@ -68,6 +76,8 @@ const initialState: DiagnosisState = {
   status: "idle",
   error: null,
   selectedActionCodes: [],
+  esgSurveyAnswers: null,
+  aiActionReasons: null,
 };
 
 // 새로고침해도 같은 페이지에 남아있도록 진단 결과를 sessionStorage에 보관한다.
@@ -77,7 +87,11 @@ const STORAGE_KEY = "glgc-diagnosis";
 
 type PersistedDiagnosisState = Pick<
   DiagnosisState,
-  "address" | "result" | "selectedActionCodes"
+  | "address"
+  | "result"
+  | "selectedActionCodes"
+  | "esgSurveyAnswers"
+  | "aiActionReasons"
 >;
 
 function readPersistedState(): PersistedDiagnosisState | null {
@@ -100,6 +114,8 @@ export type DiagnosisContextValue = DiagnosisState & {
   setStatus: (status: DiagnosisStatus, error?: string | null) => void;
   setUserTypeOverride: (userType: UserType) => void;
   setSelectedActionCodes: (codes: string[]) => void;
+  setEsgSurveyAnswers: (answers: EsgSurveyAnswers | null) => void;
+  setAiActionReasons: (reasons: Record<string, string>) => void;
   reset: () => void;
 };
 
@@ -132,9 +148,18 @@ export function DiagnosisProvider({ children }: { children: React.ReactNode }) {
       address: state.address,
       result: state.result,
       selectedActionCodes: state.selectedActionCodes,
+      esgSurveyAnswers: state.esgSurveyAnswers,
+      aiActionReasons: state.aiActionReasons,
     };
     window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
-  }, [isHydrated, state.address, state.result, state.selectedActionCodes]);
+  }, [
+    isHydrated,
+    state.address,
+    state.result,
+    state.selectedActionCodes,
+    state.esgSurveyAnswers,
+    state.aiActionReasons,
+  ]);
 
   const value = useMemo<DiagnosisContextValue>(
     () => ({
@@ -162,6 +187,10 @@ export function DiagnosisProvider({ children }: { children: React.ReactNode }) {
         ),
       setSelectedActionCodes: (selectedActionCodes) =>
         setState((current) => ({ ...current, selectedActionCodes })),
+      setEsgSurveyAnswers: (esgSurveyAnswers) =>
+        setState((current) => ({ ...current, esgSurveyAnswers })),
+      setAiActionReasons: (aiActionReasons) =>
+        setState((current) => ({ ...current, aiActionReasons })),
       reset: () => {
         window.sessionStorage.removeItem(STORAGE_KEY);
         setState(initialState);

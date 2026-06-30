@@ -37,23 +37,19 @@ export default function PrivacyPage() {
   return (
     <>
       <div className="scrollbar-hidden h-screen overflow-y-auto overscroll-contain pb-32 sm:h-full">
-        <header className="flex items-center gap-4 border-b border-[#e5eee9] bg-[#f2faf6] px-5 py-6">
+        <header className="sticky top-0 z-10 flex items-center gap-4 border-b border-[#e5eee9] bg-[#f2faf6] px-5 py-6">
           <Link
-            href="/mypage"
+            href="/mypage?tab=settings"
             className="grid size-10 place-items-center rounded-full border border-[#c9eee4] bg-white text-[#13261f]"
             aria-label="마이페이지로 돌아가기"
           >
             <ChevronLeftIcon />
           </Link>
-          <h1 className="text-xl font-black">개인정보 처리방침</h1>
+          <h1 className="ml-3 text-xl font-black">개인정보 처리방침</h1>
         </header>
 
         <section className="px-5 py-6">
-          <p className="text-xs font-bold text-[#9aa6a1]">
-            시행일: 2025년 1월 1일
-          </p>
-
-          <p className="mt-4 text-sm font-bold leading-6 text-[#5f7870]">
+          <p className="text-sm font-bold leading-6 text-[#5f7870]">
             GreenCheck(이하 서비스)는 이용자의 개인정보를 소중히 여기며,
             「개인정보 보호법」에 따라 아래와 같이 개인정보 처리방침을
             수립·공개합니다.
@@ -119,8 +115,7 @@ export default function PrivacyPage() {
 
           <Section title="제7조 개인정보 보호 책임자">
             <ul className="list-none space-y-1">
-              <li>책임자: GreenCheck 개인정보 보호팀</li>
-              <li>이메일: privacy@greencheck.kr</li>
+              <li>책임자: GreenCheck 팀</li>
             </ul>
           </Section>
         </section>

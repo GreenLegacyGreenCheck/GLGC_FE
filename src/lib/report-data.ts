@@ -120,6 +120,26 @@ export type DiagnosisReportData = {
   costSavings: CostSavings;
 };
 
+const GRADE_BANDS: GradeBand[] = [
+  { grade: "A", minTons: 0, maxTons: 1.5, colorClass: "bg-[#1ba77d]" },
+  { grade: "B", minTons: 1.5, maxTons: 2.3, colorClass: "bg-[#7bc9a6]" },
+  { grade: "C", minTons: 2.3, maxTons: 3.0, colorClass: "bg-[#e0a23a]" },
+  { grade: "D", minTons: 3.0, maxTons: 4.0, colorClass: "bg-[#d9764a]" },
+];
+
+// 백엔드 src/common/grade.ts의 getGradeForKg와 동일한 임계값 — XGBoost가 돌려준
+// 실제 배출량(톤)으로 등급을 매길 때 쓴다.
+export function getGradeInfo(annualCo2Tons: number): {
+  grade: string;
+  gradeColorClass: string;
+} {
+  const band =
+    GRADE_BANDS.find((candidate) => annualCo2Tons <= candidate.maxTons) ??
+    GRADE_BANDS[GRADE_BANDS.length - 1];
+
+  return { grade: band.grade, gradeColorClass: band.colorClass };
+}
+
 export const DUMMY_REPORT: DiagnosisReportData = {
   annualCo2Tons: 2.84,
   grade: "C",
@@ -132,12 +152,7 @@ export const DUMMY_REPORT: DiagnosisReportData = {
   zScore: 0.73,
   percentile: 23,
   percentileMessage: "동종업 상위 23%에 해당해요. 감축 액션이 필요해요.",
-  gradeBands: [
-    { grade: "A", minTons: 0, maxTons: 1.5, colorClass: "bg-[#1ba77d]" },
-    { grade: "B", minTons: 1.5, maxTons: 2.3, colorClass: "bg-[#7bc9a6]" },
-    { grade: "C", minTons: 2.3, maxTons: 3.0, colorClass: "bg-[#e0a23a]" },
-    { grade: "D", minTons: 3.0, maxTons: 4.0, colorClass: "bg-[#d9764a]" },
-  ],
+  gradeBands: GRADE_BANDS,
   emissionTree: {
     id: "root",
     label: "총 배출량",
@@ -230,11 +245,7 @@ export const DUMMY_REPORT: DiagnosisReportData = {
     { text: "10%", emphasis: true },
     { text: "의 감축이 가능합니다." },
   ],
-  goal: {
-    currentTons: 2.84,
-    targetTons: 2.5,
-    progressPercent: 48,
-  },
+  goal: { currentTons: 2.84, targetTons: 2.5, progressPercent: 48 },
   trendScenarios: [
     {
       label: "현재 추세 유지 시",

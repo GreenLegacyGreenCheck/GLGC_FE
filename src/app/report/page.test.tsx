@@ -1,7 +1,8 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithDiagnosis } from "@/context/diagnosis-test-utils";
+import { renderWithAuth } from "@/context/auth-test-utils";
 import type { DiagnosisResult } from "@/context/diagnosis-context";
 import ReportPage from "./page";
 
@@ -16,6 +17,44 @@ const downloadReportPdf = vi.fn().mockResolvedValue(undefined);
 vi.mock("@/lib/report-pdf", () => ({
   downloadReportPdf: (...args: unknown[]) => downloadReportPdf(...args),
 }));
+
+const diagnoseWithXgboost = vi.fn();
+
+vi.mock("@/lib/diagnosis-api", () => ({
+  diagnoseWithXgboost: (...args: unknown[]) => diagnoseWithXgboost(...args),
+}));
+
+const getMyDiagnoses = vi.fn();
+
+vi.mock("@/lib/users-api", () => ({
+  getMyDiagnoses: (...args: unknown[]) => getMyDiagnoses(...args),
+}));
+
+const getAiInsight = vi.fn();
+
+vi.mock("@/lib/ai-api", () => ({
+  getAiInsight: (...args: unknown[]) => getAiInsight(...args),
+}));
+
+beforeEach(() => {
+  // 기본값은 실패 — 대부분의 테스트는 더미 리포트 수치를 그대로 확인하므로,
+  // 원인 분석 API가 응답 못 했을 때와 같은 상태로 둔다.
+  diagnoseWithXgboost.mockReset();
+  diagnoseWithXgboost.mockRejectedValue(new Error("not mocked"));
+  getMyDiagnoses.mockReset();
+  getMyDiagnoses.mockResolvedValue({
+    diagnoses: [],
+    summary: {
+      diagnosisCount: 0,
+      lowestEmissionTons: 0,
+      recentTrend: "steady",
+      trendChangePercent: 0,
+      trendSparkline: [],
+    },
+  });
+  getAiInsight.mockReset();
+  getAiInsight.mockRejectedValue(new Error("not mocked"));
+});
 
 const fakeResult: DiagnosisResult = {
   electricOcr: {
@@ -183,6 +222,176 @@ describe("ReportPage", () => {
     expect(screen.getByRole("link", { name: "다시 진단받기" })).toHaveAttribute(
       "href",
       "/upload",
+    );
+  });
+});
+
+const fakeXgboostBase = {
+  energyGrade: { annualEmissionTons: 1.2 },
+  causeAnalysis: {
+    totalEmissionTons: 0.1,
+    elecRatioPercent: 80,
+    gasRatioPercent: 20,
+    rankedFactors: [
+      { factor: "전기 사용량", valuePercent: -40, rank: 1 },
+      { factor: "가스 사용량", valuePercent: 20, rank: 2 },
+    ],
+    comparisonMetrics: {
+      elecVsAvgPercent: -40,
+      gasVsAvgPercent: 20,
+      coolingVsAvgPercent: 5,
+    },
+  },
+  averageComparison: {
+    nationalAverageTons: 2.0,
+    industryAverageTons: 2.2,
+    diffVsNationalPercent: -40,
+    diffVsIndustryPercent: -45.5,
+    zScore: -0.5,
+    rankPercentile: 80,
+  },
+  monthlyComparison: null,
+  trendPrediction: { predictedAnnualTons: 1.1 },
+  reductionGoal: {
+    currentAnnualTons: 1.2,
+    targetAnnualTons: 1.0,
+    progressPercent: 60,
+  },
+  costSaving: {
+    currentAnnualCostKrw: 500000,
+    expectedAnnualCostKrw: 400000,
+    expectedSavingKrw: 100000,
+  },
+};
+
+describe("ReportPage XGBoost overlay", () => {
+  it("overlays real emissions, grade and ESG scores once XGBoost responds", async () => {
+    diagnoseWithXgboost.mockResolvedValue({
+      ...fakeXgboostBase,
+      esgScore: {
+        e: {
+          emissionScore: 100,
+          energyScore: 100,
+          surveyScore: 80,
+          finalScore: 93,
+        },
+        s: 75,
+        g: 60,
+      },
+    });
+
+    renderWithDiagnosis(<ReportPage />, {
+      electricFile,
+      result: fakeResult,
+      esgSurveyAnswers: { "E-1-2": 4 },
+    });
+
+    // grade A (<=1.5t) and the real annual tons replace the dummy "C"/2.84.
+    expect(await screen.findAllByText("A")).not.toHaveLength(0);
+    expect(screen.getAllByText("1.2").length).toBeGreaterThan(0);
+    expect(screen.getByText("93")).toBeInTheDocument();
+    expect(screen.getByText("75")).toBeInTheDocument();
+    expect(screen.getByText("60")).toBeInTheDocument();
+  });
+
+  it("keeps the dummy ESG scores when the survey was skipped, even if XGBoost responds", async () => {
+    diagnoseWithXgboost.mockResolvedValue({
+      ...fakeXgboostBase,
+      esgScore: {
+        e: {
+          emissionScore: 100,
+          energyScore: 100,
+          surveyScore: null,
+          finalScore: 100,
+        },
+        s: null,
+        g: null,
+      },
+    });
+
+    renderWithDiagnosis(<ReportPage />, {
+      electricFile,
+      result: fakeResult,
+      esgSurveyAnswers: {},
+    });
+
+    // 배출량/등급은 그대로 실데이터로 바뀌지만, ESG 점수는 더미(42/68/55)를 유지한다.
+    expect(await screen.findAllByText("A")).not.toHaveLength(0);
+    expect(screen.getByText("42")).toBeInTheDocument();
+    expect(screen.getByText("68")).toBeInTheDocument();
+    expect(screen.getByText("55")).toBeInTheDocument();
+  });
+
+  it("shows real average comparison, a single trend scenario, goal and cost savings", async () => {
+    diagnoseWithXgboost.mockResolvedValue({
+      ...fakeXgboostBase,
+      esgScore: {
+        e: {
+          emissionScore: 100,
+          energyScore: 100,
+          surveyScore: null,
+          finalScore: 100,
+        },
+        s: null,
+        g: null,
+      },
+    });
+
+    renderWithDiagnosis(<ReportPage />, {
+      electricFile,
+      result: fakeResult,
+      esgSurveyAnswers: {},
+    });
+
+    expect(await screen.findByText("-40% 낮음")).toBeInTheDocument();
+    expect(screen.getByText("현재 추세 유지 시")).toBeInTheDocument();
+    expect(screen.queryByText("추천 액션 적용 시")).not.toBeInTheDocument();
+    expect(screen.getAllByText("1.1t").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("1t").length).toBeGreaterThan(0);
+    expect(screen.getByText("60%")).toBeInTheDocument();
+    expect(screen.getByText("50만원")).toBeInTheDocument();
+    expect(screen.getByText("40만원")).toBeInTheDocument();
+    expect(screen.getByText("연간 약 10만원 절감")).toBeInTheDocument();
+  });
+
+  it("sends the previous diagnosis's electricity usage as prev_elec_kwh when logged in", async () => {
+    getMyDiagnoses.mockResolvedValue({
+      diagnoses: [
+        { id: "diagnosis-1", usageKwh: 287 },
+        { id: "diagnosis-0", usageKwh: 410 },
+      ],
+      summary: {
+        diagnosisCount: 2,
+        lowestEmissionTons: 1,
+        recentTrend: "improving",
+        trendChangePercent: -10,
+        trendSparkline: [1, 1.2],
+      },
+    });
+    diagnoseWithXgboost.mockResolvedValue({
+      ...fakeXgboostBase,
+      esgScore: {
+        e: {
+          emissionScore: 100,
+          energyScore: 100,
+          surveyScore: null,
+          finalScore: 100,
+        },
+        s: null,
+        g: null,
+      },
+    });
+
+    renderWithAuth(
+      <ReportPage />,
+      { token: "token-1", user: { id: "user-1", email: "a@b.com" } },
+      { electricFile, result: fakeResult, esgSurveyAnswers: {} },
+    );
+
+    await screen.findAllByText("A");
+
+    expect(diagnoseWithXgboost).toHaveBeenCalledWith(
+      expect.objectContaining({ prevElecKwh: 410 }),
     );
   });
 });

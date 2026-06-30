@@ -1,11 +1,20 @@
 "use client";
 
 import BottomNavigation from "@/components/BottomNavigation";
-import { SproutIcon } from "@/components/icons";
+import EsgSurveySheet from "@/components/EsgSurveySheet";
+import { SparkleIcon, SproutIcon } from "@/components/icons";
+import { useAuth } from "@/context/auth-context";
 import { useDiagnosis } from "@/context/diagnosis-context";
+import { getEsgQuestions } from "@/lib/diagnosis-api";
+import type { EsgSurveyAnswers, EsgSurveyQuestion } from "@/lib/esg-survey";
 import { runDiagnosisPipeline, type PipelineStepId } from "@/lib/pipeline";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+
+// 분석에 시간이 걸리는 동안 설문을 유도하는 팝업을 띄우기까지의 지연.
+// 너무 빠르면 로딩 화면이 뜨자마자 끼어드는 느낌이라, 진행 단계가 한두 개
+// 보인 뒤에 자연스럽게 제안하도록 둔다.
+const SURVEY_PROMPT_DELAY_MS = 2800;
 
 const STEPS: { id: PipelineStepId; title: string; subtitle: string }[] = [
   { id: "ocr", title: "고지서 OCR 추출", subtitle: "텍스트·수치 인식 중" },
@@ -53,14 +62,30 @@ function CheckIcon() {
 
 export default function AnalyzingPage() {
   const router = useRouter();
-  const { electricFile, gasFile, status, result, setResult, setStatus } =
-    useDiagnosis();
+  const {
+    address,
+    electricFile,
+    gasFile,
+    status,
+    result,
+    setResult,
+    setStatus,
+    esgSurveyAnswers,
+    setEsgSurveyAnswers,
+  } = useDiagnosis();
+  const { token } = useAuth();
   const [completedSteps, setCompletedSteps] = useState<Set<PipelineStepId>>(
     new Set(),
   );
   const [displayPercent, setDisplayPercent] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [surveyPromptVisible, setSurveyPromptVisible] = useState(false);
+  const [surveySheetOpen, setSurveySheetOpen] = useState(false);
+  const [esgQuestions, setEsgQuestions] = useState<EsgSurveyQuestion[] | null>(
+    null,
+  );
+  const [esgQuestionsFailed, setEsgQuestionsFailed] = useState(false);
   const hasStartedRef = useRef(false);
   const isMountedRef = useRef(true);
   const actionQueueRef = useRef<(() => void)[]>([]);
@@ -73,6 +98,83 @@ export default function AnalyzingPage() {
       isMountedRef.current = false;
     };
   }, []);
+
+  // ESG 설문 문항은 백엔드(XGBoost 서비스)에서 받아와야 해서, 분석이
+  // 시작되자마자 미리 가져와 둔다 — 설문 팝업이 뜰 때 로딩 없이 바로
+  // 보여주기 위함.
+  useEffect(() => {
+    let isCancelled = false;
+
+    getEsgQuestions()
+      .then((questions) => {
+        if (!isCancelled) setEsgQuestions(questions);
+      })
+      .catch(() => {
+        if (!isCancelled) setEsgQuestionsFailed(true);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  // 문항을 못 가져오면 설문 자체가 불가능하므로, 진단 흐름이 막히지 않게
+  // 빈 응답으로 곧바로 통과시킨다.
+  useEffect(() => {
+    if (esgQuestionsFailed && !esgSurveyAnswers) {
+      setEsgSurveyAnswers({});
+    }
+  }, [esgQuestionsFailed, esgSurveyAnswers, setEsgSurveyAnswers]);
+
+  // 설문에 이미 답했다면(esgSurveyAnswers) 다시 끼어들지 않는다. 설문은
+  // 필수라 한 번 떠오르면 사용자가 직접 닫을 방법은 없다 — 탭해서 시작하거나,
+  // 분석이 먼저 끝나면 자동으로 열린다(아래 강제 오픈 effect 참고).
+  useEffect(() => {
+    if (esgSurveyAnswers || !esgQuestions) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      if (isMountedRef.current) {
+        setSurveyPromptVisible(true);
+      }
+    }, SURVEY_PROMPT_DELAY_MS);
+
+    return () => clearTimeout(timeoutId);
+  }, [esgSurveyAnswers, esgQuestions]);
+
+  // 분석이 설문보다 먼저 끝나도 결과로 못 넘어가게, 설문을 못 본 채로
+  // 끝났다면 곧바로 강제로 띄운다.
+  useEffect(() => {
+    if (
+      status === "done" &&
+      result &&
+      !esgSurveyAnswers &&
+      esgQuestions &&
+      !surveySheetOpen
+    ) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSurveyPromptVisible(false);
+      setSurveySheetOpen(true);
+    }
+  }, [status, result, esgSurveyAnswers, esgQuestions, surveySheetOpen]);
+
+  // 분석과 설문이 둘 다 끝났을 때만 결과로 넘어간다.
+  useEffect(() => {
+    if (status === "done" && result && esgSurveyAnswers) {
+      router.push("/user-type");
+    }
+  }, [status, result, esgSurveyAnswers, router]);
+
+  const handleOpenSurvey = () => {
+    setSurveyPromptVisible(false);
+    setSurveySheetOpen(true);
+  };
+
+  const handleCompleteSurvey = (answers: EsgSurveyAnswers) => {
+    setEsgSurveyAnswers(answers);
+    setSurveySheetOpen(false);
+  };
 
   // OCR's network round trip can take anywhere from a couple seconds to a
   // couple minutes depending on backend load, so a smooth easing curve
@@ -124,7 +226,11 @@ export default function AnalyzingPage() {
     }
 
     if (status === "done" && result) {
-      router.replace("/user-type");
+      // 분석은 이미 끝났으니 다시 돌리지 않는다 — 설문까지 끝났을 때만
+      // 결과로 넘어가고, 안 끝났으면 강제 오픈 effect가 설문을 띄운다.
+      if (esgSurveyAnswers) {
+        router.replace("/user-type");
+      }
       return;
     }
 
@@ -180,7 +286,7 @@ export default function AnalyzingPage() {
 
     resetStepQueue();
 
-    runDiagnosisPipeline({ electricFile, gasFile }, (step) => {
+    runDiagnosisPipeline({ electricFile, gasFile, address, token }, (step) => {
       const stepIndex = STEPS.findIndex((s) => s.id === step);
 
       enqueueStepReveal(() => {
@@ -194,7 +300,6 @@ export default function AnalyzingPage() {
         enqueueStepReveal(() => {
           setResult(diagnosisResult);
           setStatus("done");
-          router.push("/user-type");
         });
       })
       .catch((error: unknown) => {
@@ -220,6 +325,15 @@ export default function AnalyzingPage() {
 
   return (
     <>
+      {!errorMessage ? (
+        <div className="absolute inset-x-0 top-3 z-50 flex justify-center">
+          <div className="flex items-center gap-1.5 rounded-full bg-[#0d2c22]/95 px-3 py-1.5 text-white shadow-lg">
+            <SproutIcon className="size-3.5 animate-spin text-[#7be0bb]" />
+            <span className="text-xs font-black">{percent}%</span>
+          </div>
+        </div>
+      ) : null}
+
       <div className="scrollbar-hidden flex h-screen flex-col items-center justify-center overflow-y-auto overscroll-contain px-8 pb-32 pt-15.25 sm:h-full">
         {errorMessage ? (
           <div className="text-center">
@@ -329,7 +443,36 @@ export default function AnalyzingPage() {
         )}
       </div>
 
-      <BottomNavigation activeLabel="진단 리포트" />
+      {surveyPromptVisible && !surveySheetOpen ? (
+        <div className="absolute inset-x-5 bottom-28 z-30">
+          <button
+            type="button"
+            onClick={handleOpenSurvey}
+            className="flex w-full items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-xl shadow-emerald-950/15"
+          >
+            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[#eef8f3]">
+              <SparkleIcon className="size-6 text-[#1ba77d]" />
+            </span>
+            <span className="flex-1">
+              <span className="block text-sm font-black text-[#13261f]">
+                결과를 보려면 설문을 완료해주세요
+              </span>
+              <span className="mt-0.5 block text-xs font-bold text-[#789b8c]">
+                ESG 자가진단 설문, 1분이면 끝나요
+              </span>
+            </span>
+          </button>
+        </div>
+      ) : null}
+
+      {surveySheetOpen && esgQuestions ? (
+        <EsgSurveySheet
+          questions={esgQuestions}
+          onComplete={handleCompleteSurvey}
+        />
+      ) : null}
+
+      {!surveySheetOpen ? <BottomNavigation activeLabel="진단 리포트" /> : null}
     </>
   );
 }
