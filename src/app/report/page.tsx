@@ -98,8 +98,10 @@ export default function ReportPage() {
   // context가 비어있으면(새 탭·새로고침) 부족한 부분만 채운다.
   useEffect(() => {
     if (!result) return;
-    // 둘 다 있으면 아무것도 할 필요 없음
-    if (xgboostResult && aiInsight) return;
+    // xgboost + aiInsight 둘 다 있고 scenario까지 채워져 있으면 할 일 없음
+    const hasScenario =
+      aiInsight?.actions.some((a) => a.scenario !== null) ?? false;
+    if (xgboostResult && aiInsight && hasScenario) return;
 
     const hasAnswers = Boolean(
       esgSurveyAnswers && Object.keys(esgSurveyAnswers).length > 0,
