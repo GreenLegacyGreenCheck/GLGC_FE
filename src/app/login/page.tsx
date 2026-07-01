@@ -204,7 +204,7 @@ export default function LoginPage() {
               href={kakaoAuthorizeUrl}
               className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#fee500] py-4 text-base font-black text-[#13261f]"
             >
-              <Image src="/images/kakao.png" alt="" width={20} height={20} />
+              <Image src="/images/kakao.png" alt="" width={30} height={30} />
               카카오로 계속하기
             </a>
           ) : (
@@ -213,7 +213,7 @@ export default function LoginPage() {
               disabled
               className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#fee500] py-4 text-base font-black text-[#13261f] opacity-60"
             >
-              <Image src="/images/kakao.png" alt="" width={20} height={20} />
+              <Image src="/images/kakao.png" alt="" width={30} height={30} />
               카카오로 계속하기
             </button>
           )}

@@ -6,6 +6,13 @@ import type { XgboostDiagnoseResult } from "@/lib/diagnosis-api";
 
 // ai-api.ts가 이 파일의 RecommendedActionView를 import해서 순환 참조가 생기므로
 // 관련 타입을 여기에 직접 정의한다.
+export type AiActionScenario = {
+  beforeText: string;
+  afterText: string;
+  reductionGoalText: string;
+  costSavingText: string;
+};
+
 export type AiAction = {
   code: string;
   icon: string | null;
@@ -16,6 +23,7 @@ export type AiAction = {
   expectedMinKg: number;
   expectedMaxKg: number;
   reason: string;
+  scenario: AiActionScenario | null;
 };
 
 export type AiInsightResult = {

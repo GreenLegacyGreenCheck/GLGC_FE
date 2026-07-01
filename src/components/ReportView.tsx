@@ -274,6 +274,7 @@ type ReportViewProps = {
   address?: string;
   title?: string;
   ref?: Ref<HTMLDivElement>;
+  aiTopAction?: import("@/context/diagnosis-context").AiAction | null;
 };
 
 // Full content of a single diagnosis report — every section a photo-based
@@ -286,6 +287,7 @@ export default function ReportView({
   address,
   title = "탄소배출 진단 결과",
   ref,
+  aiTopAction,
 }: ReportViewProps) {
   const [selectedDegrees, setSelectedDegrees] = useState(2);
 
@@ -635,6 +637,52 @@ export default function ReportView({
           currentTons={report.annualCo2Tons}
         />
       </div>
+
+      {aiTopAction?.scenario ? (
+        <div className="mt-6 rounded-2xl bg-[#e8f7f0] p-5">
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-[#1ba77d] px-3 py-1 text-xs font-black text-white">
+              맞춤 감축 액션 시나리오
+            </span>
+            <span className="text-sm font-black text-[#13261f]">
+              {aiTopAction.title}
+            </span>
+          </div>
+          <p className="mt-2 text-xs font-bold text-[#4a7a6a]">
+            이 액션을 실행한다면 어떻게 달라질까요?
+          </p>
+
+          <div className="mt-4 flex gap-3">
+            <div className="flex-1 rounded-xl bg-white/70 p-4">
+              <p className="text-xs font-black text-[#789b8c]">Before</p>
+              <p className="mt-1 text-sm font-bold text-[#13261f] leading-relaxed">
+                {aiTopAction.scenario.beforeText}
+              </p>
+            </div>
+            <div className="flex-1 rounded-xl bg-[#1ba77d]/10 p-4">
+              <p className="text-xs font-black text-[#1ba77d]">After</p>
+              <p className="mt-1 text-sm font-bold text-[#13261f] leading-relaxed">
+                {aiTopAction.scenario.afterText}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-3 flex gap-3">
+            <div className="flex-1 rounded-xl bg-white/70 p-3">
+              <p className="text-xs font-black text-[#789b8c]">절감 목표</p>
+              <p className="mt-1 text-sm font-black text-[#13261f]">
+                {aiTopAction.scenario.reductionGoalText}
+              </p>
+            </div>
+            <div className="flex-1 rounded-xl bg-white/70 p-3">
+              <p className="text-xs font-black text-[#789b8c]">비용 절감</p>
+              <p className="mt-1 text-sm font-black text-[#13261f]">
+                {aiTopAction.scenario.costSavingText}
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="mt-6 rounded-2xl border border-[#eef3f0] bg-white p-5">
         <h2 className="text-base font-black">개선 후 모습 (Before / After)</h2>

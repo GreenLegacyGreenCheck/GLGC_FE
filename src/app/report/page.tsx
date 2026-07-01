@@ -13,6 +13,11 @@ import { mergeXgboostResult } from "@/lib/report-merge";
 import { downloadReportPdf } from "@/lib/report-pdf";
 import { toGasMegajoules } from "@/lib/scope2";
 import { getMyDiagnoses } from "@/lib/users-api";
+import {
+  requestNotifPermission,
+  writeNotifPrefs,
+} from "@/lib/notification-prefs";
+import { subscribePush } from "@/lib/push-api";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -47,6 +52,7 @@ export default function ReportPage() {
   } = useDiagnosis();
   const { token } = useAuth();
   const [isDownloading, setIsDownloading] = useState(false);
+  const [showNotifPrompt, setShowNotifPrompt] = useState(false);
   // 로컬 state는 마운트 시 context 값으로 초기화 — /analyzing에서 미리 채워두면
   // 스피너 없이 바로 렌더링되고, 새로고침 시에는 여기서 재호출한다.
   const [xgboostResult, setXgboostResult] = useState(persistedXgboostResult);
@@ -61,6 +67,17 @@ export default function ReportPage() {
       isMountedRef.current = false;
     };
   }, []);
+
+  // 리포트가 처음 완성됐을 때 한 번만 알림 권한 배너를 띄운다.
+  // 이미 결정했거나(granted/denied), 이전에 배너를 봤으면 표시하지 않는다.
+  useEffect(() => {
+    if (!xgboostResult || !aiInsight) return;
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    if (Notification.permission !== "default") return;
+    if (window.localStorage.getItem("glgc-notif-prompted")) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setShowNotifPrompt(true);
+  }, [xgboostResult, aiInsight]);
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -204,6 +221,21 @@ export default function ReportPage() {
     },
   );
 
+  const dismissNotifPrompt = () => {
+    window.localStorage.setItem("glgc-notif-prompted", "1");
+    setShowNotifPrompt(false);
+  };
+
+  const handleAllowNotif = async () => {
+    dismissNotifPrompt();
+    const granted = await requestNotifPermission();
+    if (!granted) return;
+    writeNotifPrefs({ diagnosisAlert: true });
+    if (token) {
+      subscribePush(token).catch(() => {});
+    }
+  };
+
   const handleDownload = async () => {
     if (!reportRef.current) {
       return;
@@ -241,7 +273,12 @@ export default function ReportPage() {
         </header>
 
         <section className="px-5 pb-7 pt-8">
-          <ReportView ref={reportRef} report={report} address={address} />
+          <ReportView
+            ref={reportRef}
+            report={report}
+            address={address}
+            aiTopAction={aiInsight.actions[0] ?? null}
+          />
 
           <button
             type="button"
@@ -270,6 +307,33 @@ export default function ReportPage() {
           </div>
         </section>
       </div>
+
+      {showNotifPrompt ? (
+        <div className="fixed inset-x-0 bottom-20 z-50 px-5">
+          <div className="rounded-2xl bg-[#13261f] px-5 py-4 shadow-2xl shadow-emerald-950/30">
+            <p className="text-sm font-black text-white">진단 완료 알림 받기</p>
+            <p className="mt-1 text-xs font-bold text-[#9ec9b8]">
+              다음 진단이 끝나면 바로 알려드려요.
+            </p>
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={handleAllowNotif}
+                className="flex-1 rounded-xl bg-[#1ba77d] py-2.5 text-sm font-black text-white"
+              >
+                알림 허용
+              </button>
+              <button
+                type="button"
+                onClick={dismissNotifPrompt}
+                className="rounded-xl px-4 py-2.5 text-sm font-bold text-[#9ec9b8]"
+              >
+                나중에
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <BottomNavigation activeLabel="진단 리포트" />
     </>

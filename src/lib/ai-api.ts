@@ -43,6 +43,19 @@ function normalizeAction(
           ? item.expected_max_kg
           : 0,
     reason: typeof item.reason === "string" ? item.reason : "",
+    scenario: (() => {
+      const s = item.scenario;
+      if (typeof s !== "object" || s === null) return null;
+      const sc = s as Record<string, unknown>;
+      return {
+        beforeText: typeof sc.beforeText === "string" ? sc.beforeText : "",
+        afterText: typeof sc.afterText === "string" ? sc.afterText : "",
+        reductionGoalText:
+          typeof sc.reductionGoalText === "string" ? sc.reductionGoalText : "",
+        costSavingText:
+          typeof sc.costSavingText === "string" ? sc.costSavingText : "",
+      };
+    })(),
   };
 }
 
