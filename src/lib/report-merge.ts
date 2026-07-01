@@ -112,7 +112,6 @@ function buildMonthOverMonth(
 export type AiOverlay = {
   aiSummary: string;
   aiEvidenceBullets: { text: string; isPositive: boolean }[];
-  aiActionReasons: Record<string, string>;
 };
 
 // XGBoost 결과를 기본 더미 리포트 위에 덮어씌워 실데이터 리포트를 만든다.

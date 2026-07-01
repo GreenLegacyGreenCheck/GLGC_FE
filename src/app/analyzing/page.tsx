@@ -76,7 +76,6 @@ export default function AnalyzingPage() {
     setEsgSurveyAnswers,
     setXgboostResult,
     setAiInsight,
-    setAiActionReasons,
   } = useDiagnosis();
   const { token } = useAuth();
   const [completedSteps, setCompletedSteps] = useState<Set<PipelineStepId>>(
@@ -183,11 +182,10 @@ export default function AnalyzingPage() {
           setXgboostResult(xgboostResult);
           // XGBoost 완료 직후 Gemini AI 인사이트도 미리 받아둔다.
           // /report 진입 시 둘 다 준비되어 있으면 스피너 없이 바로 렌더링된다.
-          return getAiInsight(xgboostResult, result.recommendedActions);
+          return getAiInsight(xgboostResult);
         })
         .then((insight) => {
           setAiInsight(insight);
-          setAiActionReasons(insight.actionReasons);
         })
         .catch(() => {});
 
@@ -200,7 +198,6 @@ export default function AnalyzingPage() {
     router,
     setXgboostResult,
     setAiInsight,
-    setAiActionReasons,
   ]);
 
   const handleOpenSurvey = () => {

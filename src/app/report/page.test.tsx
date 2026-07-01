@@ -72,7 +72,17 @@ const fakeXgboostResult: XgboostDiagnoseResult = {
 const fakeAiInsight = {
   aiSummary: "AI 종합 의견입니다.",
   aiEvidenceBullets: [] as { text: string; isPositive: boolean }[],
-  actionReasons: {} as Record<string, string>,
+  actions: [] as {
+    code: string;
+    icon: string | null;
+    title: string;
+    description: string;
+    difficulty: string;
+    costLabel: string;
+    expectedMinKg: number;
+    expectedMaxKg: number;
+    reason: string;
+  }[],
 };
 
 const replace = vi.fn();

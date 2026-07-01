@@ -5,11 +5,25 @@ import type { EsgSurveyAnswers } from "@/lib/esg-survey";
 import type { XgboostDiagnoseResult } from "@/lib/diagnosis-api";
 
 // ai-api.ts가 이 파일의 RecommendedActionView를 import해서 순환 참조가 생기므로
-// AiInsightResult 타입을 여기에 직접 정의한다.
+// 관련 타입을 여기에 직접 정의한다.
+export type AiAction = {
+  code: string;
+  icon: string | null;
+  title: string;
+  description: string;
+  difficulty: string;
+  costLabel: string;
+  expectedMinKg: number;
+  expectedMaxKg: number;
+  reason: string;
+};
+
 export type AiInsightResult = {
   aiSummary: string;
   aiEvidenceBullets: { text: string; isPositive: boolean }[];
-  actionReasons: Record<string, string>;
+  // XGBoost 데이터를 근거로 Gemini가 직접 추론한 감축 액션 목록.
+  // 각 액션에 개인화 근거(reason)가 내장되어 있다.
+  actions: AiAction[];
 };
 
 export type UserType = "소상공인" | "일반가구" | "취약계층";
@@ -72,9 +86,6 @@ type DiagnosisState = {
   // 채워지며, /report가 이 값이 있으면 더미 esgScores 대신 실제 응답 기반
   // 점수를 보여준다.
   esgSurveyAnswers: EsgSurveyAnswers | null;
-  // /analyzing 완료 후 미리 채워두면 /actions 페이지가 각 액션 카드에
-  // 개인화 이유를 즉시 보여줄 수 있다.
-  aiActionReasons: Record<string, string> | null;
   // XGBoost 원인 분석 결과. /analyzing 완료 후 미리 채워두면 /report 진입 시
   // 로딩 없이 바로 표시된다. 세션 간 재진단 시에는 null로 초기화한다.
   xgboostResult: XgboostDiagnoseResult | null;
@@ -92,7 +103,6 @@ const initialState: DiagnosisState = {
   error: null,
   selectedActionCodes: [],
   esgSurveyAnswers: null,
-  aiActionReasons: null,
   xgboostResult: null,
   aiInsight: null,
 };
@@ -108,7 +118,6 @@ type PersistedDiagnosisState = Pick<
   | "result"
   | "selectedActionCodes"
   | "esgSurveyAnswers"
-  | "aiActionReasons"
   | "xgboostResult"
   | "aiInsight"
 >;
@@ -134,7 +143,6 @@ export type DiagnosisContextValue = DiagnosisState & {
   setUserTypeOverride: (userType: UserType) => void;
   setSelectedActionCodes: (codes: string[]) => void;
   setEsgSurveyAnswers: (answers: EsgSurveyAnswers | null) => void;
-  setAiActionReasons: (reasons: Record<string, string>) => void;
   setXgboostResult: (result: XgboostDiagnoseResult | null) => void;
   setAiInsight: (result: AiInsightResult | null) => void;
   reset: () => void;
@@ -170,7 +178,6 @@ export function DiagnosisProvider({ children }: { children: React.ReactNode }) {
       result: state.result,
       selectedActionCodes: state.selectedActionCodes,
       esgSurveyAnswers: state.esgSurveyAnswers,
-      aiActionReasons: state.aiActionReasons,
       xgboostResult: state.xgboostResult,
       aiInsight: state.aiInsight,
     };
@@ -181,7 +188,6 @@ export function DiagnosisProvider({ children }: { children: React.ReactNode }) {
     state.result,
     state.selectedActionCodes,
     state.esgSurveyAnswers,
-    state.aiActionReasons,
     state.xgboostResult,
     state.aiInsight,
   ]);
@@ -214,8 +220,6 @@ export function DiagnosisProvider({ children }: { children: React.ReactNode }) {
         setState((current) => ({ ...current, selectedActionCodes })),
       setEsgSurveyAnswers: (esgSurveyAnswers) =>
         setState((current) => ({ ...current, esgSurveyAnswers })),
-      setAiActionReasons: (aiActionReasons) =>
-        setState((current) => ({ ...current, aiActionReasons })),
       setXgboostResult: (xgboostResult) =>
         setState((current) => ({ ...current, xgboostResult })),
       setAiInsight: (aiInsight) =>

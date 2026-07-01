@@ -46,7 +46,7 @@ function CheckIcon() {
 
 export default function ActionsPage() {
   const router = useRouter();
-  const { result, isHydrated, setSelectedActionCodes, aiActionReasons } =
+  const { result, isHydrated, setSelectedActionCodes, aiInsight } =
     useDiagnosis();
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -60,7 +60,13 @@ export default function ActionsPage() {
     return null;
   }
 
-  const actions = result.recommendedActions;
+  // Gemini가 생성한 액션이 있으면 우선 사용, 없으면 백엔드 액션으로 폴백.
+  const actions: ((typeof result.recommendedActions)[number] & {
+    reason?: string;
+  })[] =
+    aiInsight && aiInsight.actions.length > 0
+      ? aiInsight.actions
+      : result.recommendedActions;
 
   const toggleAction = (code: string) => {
     setSelected((current) => {
@@ -162,9 +168,9 @@ export default function ActionsPage() {
                       <p className="mt-1 text-sm font-bold text-[#789b8c]">
                         {action.description}
                       </p>
-                      {aiActionReasons?.[action.code] ? (
+                      {"reason" in action && action.reason ? (
                         <p className="mt-2 rounded-xl bg-[#eef8f3] px-3 py-2 text-xs font-bold text-[#0d5f4b]">
-                          ✦ {aiActionReasons[action.code]}
+                          ✦ {action.reason}
                         </p>
                       ) : null}
                       <div className="mt-3 flex flex-wrap gap-2">

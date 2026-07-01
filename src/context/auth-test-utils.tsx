@@ -38,7 +38,6 @@ const defaultDiagnosisState: DiagnosisStateOverrides = {
   error: null,
   selectedActionCodes: [],
   esgSurveyAnswers: null,
-  aiActionReasons: null,
   xgboostResult: null,
   aiInsight: null,
   isHydrated: true,
@@ -80,7 +79,6 @@ export function renderWithAuth(
       error: null,
       selectedActionCodes: [],
       esgSurveyAnswers: null,
-      aiActionReasons: null,
       xgboostResult: null,
       aiInsight: null,
       isHydrated: true,
@@ -93,7 +91,6 @@ export function renderWithAuth(
       setUserTypeOverride: () => {},
       setSelectedActionCodes: () => {},
       setEsgSurveyAnswers: () => {},
-      setAiActionReasons: () => {},
       setXgboostResult: (xgboostResult) =>
         setDiagnosisState((current) => ({ ...current, xgboostResult })),
       setAiInsight: () => {},

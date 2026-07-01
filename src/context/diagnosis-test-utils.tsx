@@ -41,7 +41,6 @@ const defaultState: DiagnosisStateOverrides = {
   error: null,
   selectedActionCodes: [],
   esgSurveyAnswers: null,
-  aiActionReasons: null,
   xgboostResult: null,
   aiInsight: null,
   isHydrated: true,
@@ -63,7 +62,6 @@ export function renderWithDiagnosis(
       error: null,
       selectedActionCodes: [],
       esgSurveyAnswers: null,
-      aiActionReasons: null,
       xgboostResult: null,
       aiInsight: null,
       isHydrated: true,
@@ -92,8 +90,6 @@ export function renderWithDiagnosis(
         setState((current) => ({ ...current, selectedActionCodes })),
       setEsgSurveyAnswers: (esgSurveyAnswers) =>
         setState((current) => ({ ...current, esgSurveyAnswers })),
-      setAiActionReasons: (aiActionReasons) =>
-        setState((current) => ({ ...current, aiActionReasons })),
       setXgboostResult: (xgboostResult) =>
         setState((current) => ({ ...current, xgboostResult })),
       setAiInsight: (aiInsight) =>

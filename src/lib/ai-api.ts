@@ -1,10 +1,23 @@
 import type { XgboostDiagnoseResult } from "./diagnosis-api";
-import type {
-  AiInsightResult,
-  RecommendedActionView,
-} from "@/context/diagnosis-context";
+import type { AiInsightResult } from "@/context/diagnosis-context";
 
 export type { AiInsightResult };
+
+function isAiAction(value: unknown): boolean {
+  if (typeof value !== "object" || value === null) return false;
+  const item = value as Record<string, unknown>;
+  return (
+    typeof item.code === "string" &&
+    (item.icon === null || typeof item.icon === "string") &&
+    typeof item.title === "string" &&
+    typeof item.description === "string" &&
+    typeof item.difficulty === "string" &&
+    typeof item.costLabel === "string" &&
+    typeof item.expectedMinKg === "number" &&
+    typeof item.expectedMaxKg === "number" &&
+    typeof item.reason === "string"
+  );
+}
 
 function isAiInsightResult(value: unknown): value is AiInsightResult {
   if (typeof value !== "object" || value === null) return false;
@@ -12,8 +25,8 @@ function isAiInsightResult(value: unknown): value is AiInsightResult {
   return (
     typeof item.aiSummary === "string" &&
     Array.isArray(item.aiEvidenceBullets) &&
-    typeof item.actionReasons === "object" &&
-    item.actionReasons !== null
+    Array.isArray(item.actions) &&
+    item.actions.every(isAiAction)
   );
 }
 
@@ -27,9 +40,11 @@ function getBaseUrl(): string {
   return baseUrl;
 }
 
+// XGBoost 분석 결과를 Gemini에 전달해 리포트 요약, 근거 문장, 개인화 감축 액션을
+// 생성한다. 액션은 Gemini가 에너지 데이터를 직접 추론해 생성하므로 백엔드의
+// recommendedActions에 의존하지 않는다.
 export async function getAiInsight(
   xgboost: XgboostDiagnoseResult,
-  actions: RecommendedActionView[],
 ): Promise<AiInsightResult> {
   const baseUrl = getBaseUrl();
 
@@ -50,8 +65,9 @@ export async function getAiInsight(
       gasRatioPercent: xgboost.causeAnalysis.gasRatioPercent,
       diffVsNationalPercent: xgboost.averageComparison.diffVsNationalPercent,
       diffVsIndustryPercent: xgboost.averageComparison.diffVsIndustryPercent,
+      rankPercentile: xgboost.averageComparison.rankPercentile,
       rankedFactors: xgboost.causeAnalysis.rankedFactors,
-      actions: actions.map((a) => ({ code: a.code, title: a.title })),
+      comparisonMetrics: xgboost.causeAnalysis.comparisonMetrics,
     }),
   });
 

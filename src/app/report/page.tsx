@@ -40,7 +40,6 @@ export default function ReportPage() {
     status,
     isHydrated,
     esgSurveyAnswers,
-    setAiActionReasons,
     xgboostResult: persistedXgboostResult,
     setXgboostResult: persistXgboostResult,
     aiInsight: persistedAiInsight,
@@ -127,12 +126,11 @@ export default function ReportPage() {
       }
 
       // Gemini: xgboostResult가 방금 채워졌거나 있었는데 aiInsight가 없는 경우
-      getAiInsight(xgb, result?.recommendedActions ?? [])
+      getAiInsight(xgb)
         .then((insight) => {
           if (isMountedRef.current) {
             setAiInsight(insight);
             persistAiInsight(insight);
-            setAiActionReasons(insight.actionReasons);
           }
         })
         .catch(() => {});
@@ -203,7 +201,6 @@ export default function ReportPage() {
     {
       aiSummary: aiInsight.aiSummary,
       aiEvidenceBullets: aiInsight.aiEvidenceBullets,
-      aiActionReasons: aiInsight.actionReasons,
     },
   );
 
