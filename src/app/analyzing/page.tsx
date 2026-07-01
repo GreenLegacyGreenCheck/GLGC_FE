@@ -5,9 +5,10 @@ import EsgSurveySheet from "@/components/EsgSurveySheet";
 import { SparkleIcon, SproutIcon } from "@/components/icons";
 import { useAuth } from "@/context/auth-context";
 import { useDiagnosis } from "@/context/diagnosis-context";
-import { getEsgQuestions } from "@/lib/diagnosis-api";
+import { diagnoseWithXgboost, getEsgQuestions } from "@/lib/diagnosis-api";
 import type { EsgSurveyAnswers, EsgSurveyQuestion } from "@/lib/esg-survey";
 import { runDiagnosisPipeline, type PipelineStepId } from "@/lib/pipeline";
+import { toGasMegajoules } from "@/lib/scope2";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -72,6 +73,7 @@ export default function AnalyzingPage() {
     setStatus,
     esgSurveyAnswers,
     setEsgSurveyAnswers,
+    setXgboostResult,
   } = useDiagnosis();
   const { token } = useAuth();
   const [completedSteps, setCompletedSteps] = useState<Set<PipelineStepId>>(
@@ -86,6 +88,7 @@ export default function AnalyzingPage() {
     null,
   );
   const [esgQuestionsFailed, setEsgQuestionsFailed] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
   const hasStartedRef = useRef(false);
   const isMountedRef = useRef(true);
   const actionQueueRef = useRef<(() => void)[]>([]);
@@ -160,11 +163,25 @@ export default function AnalyzingPage() {
   }, [status, result, esgSurveyAnswers, esgQuestions, surveySheetOpen]);
 
   // 분석과 설문이 둘 다 끝났을 때만 결과로 넘어간다.
+  // /report 진입 시 로딩 없이 바로 표시될 수 있도록 XGBoost를 미리 fire-and-
+  // forget으로 실행해 context에 담아둔다 — 완료 전에 /report에 도달하면
+  // 스피너로 대기하고, 완료 후면 바로 렌더링한다.
   useEffect(() => {
     if (status === "done" && result && esgSurveyAnswers) {
+      const hasAnswers = Object.keys(esgSurveyAnswers).length > 0;
+      diagnoseWithXgboost({
+        elecKwh: result.electricOcr?.usageKwh.value ?? 0,
+        gasMj: toGasMegajoules(result.gasOcr?.usageM3.value ?? null),
+        deviceUsage: {},
+        esgAnswers: hasAnswers ? esgSurveyAnswers : null,
+        prevElecKwh: null,
+      })
+        .then((xgboostResult) => setXgboostResult(xgboostResult))
+        .catch(() => {});
+
       router.push("/user-type");
     }
-  }, [status, result, esgSurveyAnswers, router]);
+  }, [status, result, esgSurveyAnswers, router, setXgboostResult]);
 
   const handleOpenSurvey = () => {
     setSurveyPromptVisible(false);
@@ -220,17 +237,26 @@ export default function AnalyzingPage() {
   }, [completedSteps]);
 
   useEffect(() => {
-    if (!electricFile) {
-      router.replace("/upload");
-      return;
-    }
-
-    if (status === "done" && result) {
-      // 분석은 이미 끝났으니 다시 돌리지 않는다 — 설문까지 끝났을 때만
-      // 결과로 넘어가고, 안 끝났으면 강제 오픈 effect가 설문을 띄운다.
+    // ① result가 있으면 분석은 완료된 것 — electricFile·status 여부와 무관.
+    //    알림 클릭으로 앱이 열렸을 때도 sessionStorage에서 result가 복원되므로
+    //    이 분기에서 처리해야 /upload로 튕기지 않는다.
+    if (result) {
       if (esgSurveyAnswers) {
         router.replace("/user-type");
       }
+      // esgSurveyAnswers 없으면 강제 오픈 effect가 설문 sheet를 띄운다.
+      return;
+    }
+
+    // ② 파이프라인이 백그라운드에서 아직 진행 중 — 다른 페이지에서 돌아온 경우.
+    //    재시작하면 두 파이프라인이 동시에 돌아 context가 덮어써지므로 막는다.
+    if (status === "running") {
+      return;
+    }
+
+    // ③ 아직 시작 안 했고 파일도 없으면 처음부터
+    if (!electricFile) {
+      router.replace("/upload");
       return;
     }
 
@@ -239,6 +265,7 @@ export default function AnalyzingPage() {
     }
 
     hasStartedRef.current = true;
+    setHasStarted(true);
     setErrorMessage(null);
 
     function resetStepQueue() {
@@ -294,27 +321,34 @@ export default function AnalyzingPage() {
       });
     })
       .then((diagnosisResult) => {
-        enqueueStepReveal(() => {
-          setCompletedSteps(new Set(STEPS.map((s) => s.id)));
-        });
-        enqueueStepReveal(() => {
-          setResult(diagnosisResult);
-          setStatus("done");
-        });
+        // context 업데이트는 마운트 여부와 무관하게 항상 실행한다 —
+        // 유저가 분석 중 다른 페이지로 이동했더라도 결과가 context에
+        // 저장돼야 알림 클릭으로 돌아왔을 때 리포트를 바로 볼 수 있다.
+        setResult(diagnosisResult);
+        setStatus("done");
+
+        // 애니메이션·로컬 상태는 아직 이 페이지에 있을 때만
+        if (isMountedRef.current) {
+          enqueueStepReveal(() => {
+            setCompletedSteps(new Set(STEPS.map((s) => s.id)));
+          });
+        }
       })
       .catch((error: unknown) => {
         resetStepQueue();
         hasStartedRef.current = false;
-
-        if (!isMountedRef.current) {
-          return;
-        }
+        setHasStarted(false);
 
         const message =
           error instanceof Error ? error.message : "분석 중 오류가 발생했어요.";
 
+        // 오류 상태도 context에 기록해두면 /analyzing으로 돌아왔을 때
+        // 에러 화면을 보여줄 수 있다.
         setStatus("error", message);
-        setErrorMessage(message);
+
+        if (isMountedRef.current) {
+          setErrorMessage(message);
+        }
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [retryCount]);
@@ -322,6 +356,9 @@ export default function AnalyzingPage() {
   const confirmedPercent = (completedSteps.size / STEPS.length) * 100;
   const percent = Math.round(Math.max(confirmedPercent, displayPercent));
   const currentStepIndex = completedSteps.size;
+  // 다른 페이지를 갔다 돌아온 경우 — 파이프라인은 백그라운드에서 실행 중이지만
+  // 이 컴포넌트 인스턴스는 새로 마운트됐으므로 로컬 진행 상태가 없다.
+  const isReconnected = status === "running" && !hasStarted;
 
   return (
     <>
@@ -329,7 +366,9 @@ export default function AnalyzingPage() {
         <div className="absolute inset-x-0 top-3 z-50 flex justify-center">
           <div className="flex items-center gap-1.5 rounded-full bg-[#0d2c22]/95 px-3 py-1.5 text-white shadow-lg">
             <SproutIcon className="size-3.5 animate-spin text-[#7be0bb]" />
-            <span className="text-xs font-black">{percent}%</span>
+            <span className="text-xs font-black">
+              {isReconnected ? "분석 중..." : `${percent}%`}
+            </span>
           </div>
         </div>
       ) : null}
@@ -359,6 +398,9 @@ export default function AnalyzingPage() {
                 className="sprout-pulse-ring absolute inset-0 rounded-full border-2 border-[#1ba77d]"
                 style={{ animationDelay: "0.9s" }}
               />
+              {/* isReconnected일 때 SVG는 고정 25% 호만 그린다.
+                  animate-spin을 SVG circle에 걸면 Safari에서 transform-origin이
+                  틀어져 레이아웃이 깨지므로, 회전 애니메이션은 중앙 아이콘에만 건다. */}
               <svg
                 aria-hidden="true"
                 viewBox="0 0 100 100"
@@ -381,20 +423,28 @@ export default function AnalyzingPage() {
                   strokeWidth="8"
                   strokeLinecap="round"
                   strokeDasharray={2 * Math.PI * 44}
-                  strokeDashoffset={2 * Math.PI * 44 * (1 - percent / 100)}
+                  strokeDashoffset={
+                    isReconnected
+                      ? 2 * Math.PI * 44 * 0.75
+                      : 2 * Math.PI * 44 * (1 - percent / 100)
+                  }
                   className="transition-[stroke-dashoffset] duration-300 ease-out"
                 />
               </svg>
               <div className="grid size-28 place-items-center rounded-full bg-white shadow-inner">
-                <SproutIcon className="size-9 text-[#1ba77d]" />
+                <SproutIcon
+                  className={`size-9 text-[#1ba77d]${isReconnected ? " animate-spin" : ""}`}
+                />
               </div>
             </div>
 
             <p className="mt-13.75 text-4xl font-black text-[#13261f]">
-              {percent}%
+              {isReconnected ? "..." : `${percent}%`}
             </p>
             <p className="mt-2 text-base font-bold text-[#789b8c]">
-              AI가 분석하고 있어요...
+              {isReconnected
+                ? "백그라운드에서 분석을 계속하고 있어요"
+                : "AI가 분석하고 있어요..."}
             </p>
 
             <ul className="mt-10 flex w-full max-w-xs flex-col gap-5">

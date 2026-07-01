@@ -18,9 +18,11 @@ vi.mock("@/lib/pipeline", () => ({
 }));
 
 const getEsgQuestions = vi.fn();
+const diagnoseWithXgboost = vi.fn();
 
 vi.mock("@/lib/diagnosis-api", () => ({
   getEsgQuestions: () => getEsgQuestions(),
+  diagnoseWithXgboost: (...args: unknown[]) => diagnoseWithXgboost(...args),
 }));
 
 const fakeEsgQuestions: EsgSurveyQuestion[] = [
@@ -87,6 +89,8 @@ describe("AnalyzingPage", () => {
     replace.mockClear();
     getEsgQuestions.mockReset();
     getEsgQuestions.mockResolvedValue(fakeEsgQuestions);
+    diagnoseWithXgboost.mockReset();
+    diagnoseWithXgboost.mockResolvedValue({});
   });
 
   it("redirects back to /upload when there is no electric bill in context", () => {

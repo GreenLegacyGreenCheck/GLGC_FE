@@ -608,6 +608,7 @@ export default function UploadPage() {
     setGasFile,
     setStatus,
     setEsgSurveyAnswers,
+    setXgboostResult,
   } = useDiagnosis();
   const [electricFile, setLocalElectricFile] = useState<File | null>(null);
   const [gasFile, setLocalGasFile] = useState<File | null>(null);
@@ -622,9 +623,10 @@ export default function UploadPage() {
     setGasFile(gasFile);
     setAddress(address);
     setStatus("running");
-    // 새 진단을 시작할 때마다 ESG 설문도 매번 다시 받아야 하므로, 이전
-    // 진단에서 답했던 응답이 남아있지 않도록 초기화한다.
+    // 새 진단을 시작할 때마다 이전 진단의 ESG 설문 응답과 XGBoost 결과를
+    // 초기화해 스피너 없이 새 결과가 표시되게 한다.
     setEsgSurveyAnswers(null);
+    setXgboostResult(null);
     router.push("/analyzing");
   };
 

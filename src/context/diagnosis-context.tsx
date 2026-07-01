@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { EsgSurveyAnswers } from "@/lib/esg-survey";
+import type { XgboostDiagnoseResult } from "@/lib/diagnosis-api";
 
 export type UserType = "소상공인" | "일반가구" | "취약계층";
 
@@ -66,6 +67,9 @@ type DiagnosisState = {
   // /report에서 XGBoost 결과로 AI 인사이트를 받으면 여기 저장한다.
   // /actions 페이지가 이 값을 읽어 각 액션 카드에 개인화 이유를 보여준다.
   aiActionReasons: Record<string, string> | null;
+  // XGBoost 원인 분석 결과. /analyzing 완료 후 미리 채워두면 /report 진입 시
+  // 로딩 없이 바로 표시된다. 세션 간 재진단 시에는 null로 초기화한다.
+  xgboostResult: XgboostDiagnoseResult | null;
 };
 
 const initialState: DiagnosisState = {
@@ -78,11 +82,12 @@ const initialState: DiagnosisState = {
   selectedActionCodes: [],
   esgSurveyAnswers: null,
   aiActionReasons: null,
+  xgboostResult: null,
 };
 
-// 새로고침해도 같은 페이지에 남아있도록 진단 결과를 sessionStorage에 보관한다.
-// File 객체(electricFile/gasFile)는 직렬화할 수 없어 여기서는 제외하고,
-// 새로고침 후 다시 필요한 building block(결과/주소/선택한 액션)만 저장한다.
+// localStorage를 쓰는 이유: 푸시 알림 클릭으로 새 탭이 열릴 때도
+// 이전 진단 결과를 복원해야 하는데, sessionStorage는 탭마다 독립적이라
+// 새 탭에서는 데이터가 없어 /upload로 튕겼다. localStorage는 탭 간 공유된다.
 const STORAGE_KEY = "glgc-diagnosis";
 
 type PersistedDiagnosisState = Pick<
@@ -92,11 +97,12 @@ type PersistedDiagnosisState = Pick<
   | "selectedActionCodes"
   | "esgSurveyAnswers"
   | "aiActionReasons"
+  | "xgboostResult"
 >;
 
 function readPersistedState(): PersistedDiagnosisState | null {
   try {
-    const raw = window.sessionStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(STORAGE_KEY);
     return raw ? (JSON.parse(raw) as PersistedDiagnosisState) : null;
   } catch {
     return null;
@@ -116,6 +122,7 @@ export type DiagnosisContextValue = DiagnosisState & {
   setSelectedActionCodes: (codes: string[]) => void;
   setEsgSurveyAnswers: (answers: EsgSurveyAnswers | null) => void;
   setAiActionReasons: (reasons: Record<string, string>) => void;
+  setXgboostResult: (result: XgboostDiagnoseResult | null) => void;
   reset: () => void;
 };
 
@@ -150,8 +157,9 @@ export function DiagnosisProvider({ children }: { children: React.ReactNode }) {
       selectedActionCodes: state.selectedActionCodes,
       esgSurveyAnswers: state.esgSurveyAnswers,
       aiActionReasons: state.aiActionReasons,
+      xgboostResult: state.xgboostResult,
     };
-    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
   }, [
     isHydrated,
     state.address,
@@ -159,6 +167,7 @@ export function DiagnosisProvider({ children }: { children: React.ReactNode }) {
     state.selectedActionCodes,
     state.esgSurveyAnswers,
     state.aiActionReasons,
+    state.xgboostResult,
   ]);
 
   const value = useMemo<DiagnosisContextValue>(
@@ -191,8 +200,10 @@ export function DiagnosisProvider({ children }: { children: React.ReactNode }) {
         setState((current) => ({ ...current, esgSurveyAnswers })),
       setAiActionReasons: (aiActionReasons) =>
         setState((current) => ({ ...current, aiActionReasons })),
+      setXgboostResult: (xgboostResult) =>
+        setState((current) => ({ ...current, xgboostResult })),
       reset: () => {
-        window.sessionStorage.removeItem(STORAGE_KEY);
+        window.localStorage.removeItem(STORAGE_KEY);
         setState(initialState);
       },
     }),

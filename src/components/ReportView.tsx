@@ -255,7 +255,7 @@ function TrendScenarioCard({
         >
           {currentGrade}
         </span>
-        <span aria-hidden="true" className="text-[#789b8c]"></span>
+        <ArrowRightIcon className="size-4 shrink-0 text-[#789b8c]" />
         <span
           className={`inline-grid size-9 place-items-center rounded-lg text-base font-black text-white ${scenario.projectedGradeColorClass}`}
         >
@@ -298,6 +298,18 @@ export default function ReportView({
     report.simulationOptions.find(
       (option) => option.degrees === selectedDegrees,
     ) ?? report.simulationOptions[0];
+
+  // Before/After 막대는 둘 중 큰 값을 100%로 기준 삼아 비례 높이로 그린다.
+  const beforeAfterMax = Math.max(
+    report.annualCo2Tons,
+    selectedSimulation.projectedTons,
+  );
+  const beforeHeightPercent =
+    beforeAfterMax > 0 ? (report.annualCo2Tons / beforeAfterMax) * 100 : 100;
+  const afterHeightPercent =
+    beforeAfterMax > 0
+      ? (selectedSimulation.projectedTons / beforeAfterMax) * 100
+      : 100;
 
   return (
     <div ref={ref} className="bg-[#f2faf6]">
@@ -530,60 +542,71 @@ export default function ReportView({
         </div>
       </div>
 
-      <div className="mt-6 rounded-2xl border border-[#eef3f0] bg-white p-5">
-        <h2 className="text-base font-black">전월 비교</h2>
-        <p className="mt-1 text-xs font-bold text-[#789b8c]">
-          지난달과 비교해 사용량이 어떻게 달라졌는지 보여줘요
-        </p>
-        <div className="mt-4 divide-y divide-[#eef3f0]">
-          {report.monthOverMonth.map((metric) => (
-            <div key={metric.label} className="py-4 first:pt-0 last:pb-0">
-              <p className="flex items-center gap-1.5 text-sm font-black">
-                <metric.icon className={`size-4 ${metric.iconColorClass}`} />
-                {metric.label}
-              </p>
+      {report.monthOverMonth.length > 0 ? (
+        <div className="mt-6 rounded-2xl border border-[#eef3f0] bg-white p-5">
+          <h2 className="text-base font-black">전월 비교</h2>
+          <p className="mt-1 text-xs font-bold text-[#789b8c]">
+            지난달과 비교해 사용량이 어떻게 달라졌는지 보여줘요
+          </p>
+          <div className="mt-4 divide-y divide-[#eef3f0]">
+            {report.monthOverMonth.map((metric) => (
+              <div key={metric.label} className="py-4 first:pt-0 last:pb-0">
+                <p className="flex items-center gap-1.5 text-sm font-black">
+                  <metric.icon className={`size-4 ${metric.iconColorClass}`} />
+                  {metric.label}
+                </p>
 
-              <div
-                className={`mt-3 overflow-hidden rounded-2xl border ${metric.accentBorderClass}`}
-              >
-                <div className="flex items-center px-4 py-4">
-                  <div className="flex-1 text-center">
-                    <p className="text-xs font-bold text-[#789b8c]">지난달</p>
-                    <p className="mt-1 text-3xl font-black">
-                      {metric.previousValue}
-                    </p>
-                    <p className="text-xs font-bold text-[#789b8c]">
-                      {metric.unit}
-                    </p>
-                  </div>
-                  <div className="flex h-14 flex-col items-center justify-center gap-1">
-                    <div aria-hidden="true" className="h-4 w-px bg-[#d8e7e0]" />
-                    <span aria-hidden="true" className="text-[#789b8c]"></span>
-                    <div aria-hidden="true" className="h-4 w-px bg-[#d8e7e0]" />
-                  </div>
-                  <div className="flex-1 text-center">
-                    <p className="text-xs font-bold text-[#789b8c]">이번달</p>
-                    <p
-                      className={`mt-1 text-3xl font-black ${metric.accentTextClass}`}
-                    >
-                      {metric.currentValue}
-                    </p>
-                    <p className="text-xs font-bold text-[#789b8c]">
-                      {metric.unit}
-                    </p>
-                  </div>
-                </div>
                 <div
-                  className={`px-4 py-3 text-center text-base font-black text-white ${metric.accentBgClass}`}
+                  className={`mt-3 overflow-hidden rounded-2xl border ${metric.accentBorderClass}`}
                 >
-                  {metric.isIncrease ? "▲" : "▼"} {metric.percentChange}%{" "}
-                  {metric.isIncrease ? "증가" : "감소"}
+                  <div className="flex items-center px-4 py-4">
+                    <div className="flex-1 text-center">
+                      <p className="text-xs font-bold text-[#789b8c]">지난달</p>
+                      <p className="mt-1 text-3xl font-black">
+                        {metric.previousValue}
+                      </p>
+                      <p className="text-xs font-bold text-[#789b8c]">
+                        {metric.unit}
+                      </p>
+                    </div>
+                    <div className="flex h-14 flex-col items-center justify-center gap-1">
+                      <div
+                        aria-hidden="true"
+                        className="h-4 w-px bg-[#d8e7e0]"
+                      />
+                      <span
+                        aria-hidden="true"
+                        className="text-[#789b8c]"
+                      ></span>
+                      <div
+                        aria-hidden="true"
+                        className="h-4 w-px bg-[#d8e7e0]"
+                      />
+                    </div>
+                    <div className="flex-1 text-center">
+                      <p className="text-xs font-bold text-[#789b8c]">이번달</p>
+                      <p
+                        className={`mt-1 text-3xl font-black ${metric.accentTextClass}`}
+                      >
+                        {metric.currentValue}
+                      </p>
+                      <p className="text-xs font-bold text-[#789b8c]">
+                        {metric.unit}
+                      </p>
+                    </div>
+                  </div>
+                  <div
+                    className={`px-4 py-3 text-center text-base font-black text-white ${metric.accentBgClass}`}
+                  >
+                    {metric.isIncrease ? "▲" : "▼"} {metric.percentChange}%{" "}
+                    {metric.isIncrease ? "증가" : "감소"}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="mt-6 rounded-2xl border border-[#eef3f0] bg-white p-5">
         <h2 className="text-base font-black">추세 예측</h2>
@@ -641,7 +664,10 @@ export default function ReportView({
         <div className="mt-5 flex items-end gap-4">
           <div className="flex flex-1 flex-col items-center">
             <div className="flex h-28 w-full max-w-16 items-end">
-              <div className="h-full w-full rounded-t-lg bg-[#e0a23a]" />
+              <div
+                className="w-full rounded-t-lg bg-[#e0a23a]"
+                style={{ height: `${beforeHeightPercent}%` }}
+              />
             </div>
             <p className="mt-2 text-lg font-black">{report.annualCo2Tons}t</p>
             <p className="text-xs font-bold text-[#789b8c]">Before</p>
@@ -651,9 +677,7 @@ export default function ReportView({
             <div className="flex h-28 w-full max-w-16 items-end">
               <div
                 className="w-full rounded-t-lg bg-[#1ba77d]"
-                style={{
-                  height: `${Math.min((selectedSimulation.projectedTons / report.annualCo2Tons) * 100, 100)}%`,
-                }}
+                style={{ height: `${afterHeightPercent}%` }}
               />
             </div>
             <p className="mt-2 text-lg font-black text-[#1ba77d]">

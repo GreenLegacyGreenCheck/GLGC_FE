@@ -4,7 +4,67 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithDiagnosis } from "@/context/diagnosis-test-utils";
 import { renderWithAuth } from "@/context/auth-test-utils";
 import type { DiagnosisResult } from "@/context/diagnosis-context";
+import type { XgboostDiagnoseResult } from "@/lib/diagnosis-api";
 import ReportPage from "./page";
+
+// mergeXgboostResult(DUMMY_REPORT, fakeXgboostResult, false)가 DUMMY_REPORT와
+// 동일한 핵심 수치를 렌더링하도록 맞춰둔 픽스처.
+// xgboostResult를 context에 미리 넣어두면 /report가 스피너 없이 동기적으로 렌더링된다.
+const fakeXgboostResult: XgboostDiagnoseResult = {
+  energyGrade: { annualEmissionTons: 2.84 },
+  causeAnalysis: {
+    totalEmissionTons: 2.84,
+    elecRatioPercent: 69,
+    gasRatioPercent: 31,
+    rankedFactors: [
+      { factor: "전기 사용량", valuePercent: 42, rank: 1 },
+      { factor: "냉방기 사용", valuePercent: 18, rank: 2 },
+      { factor: "가스 사용량", valuePercent: 11, rank: 3 },
+    ],
+    comparisonMetrics: {
+      elecVsAvgPercent: 27,
+      gasVsAvgPercent: 0,
+      coolingVsAvgPercent: 18,
+    },
+  },
+  averageComparison: {
+    nationalAverageTons: 2.15,
+    industryAverageTons: 2.36,
+    diffVsNationalPercent: 32,
+    diffVsIndustryPercent: 20,
+    zScore: 0.73,
+    rankPercentile: 23,
+  },
+  monthlyComparison: {
+    electricity: { previousKwh: 306, currentKwh: 330, changePercent: 7.9 },
+    carbonEmission: {
+      previousTons: 2.51,
+      currentTons: 2.84,
+      changePercent: 13,
+    },
+  },
+  trendPrediction: { predictedAnnualTons: 3.02 },
+  reductionGoal: {
+    currentAnnualTons: 2.84,
+    targetAnnualTons: 2.5,
+    progressPercent: 48,
+  },
+  costSaving: {
+    currentAnnualCostKrw: 740000,
+    expectedAnnualCostKrw: 660000,
+    expectedSavingKrw: 80000,
+  },
+  esgScore: {
+    e: {
+      emissionScore: null,
+      energyScore: null,
+      surveyScore: null,
+      finalScore: null,
+    },
+    s: null,
+    g: null,
+  },
+};
 
 const replace = vi.fn();
 
@@ -100,7 +160,11 @@ describe("ReportPage", () => {
   });
 
   it("renders the dummy report figures", () => {
-    renderWithDiagnosis(<ReportPage />, { electricFile, result: fakeResult });
+    renderWithDiagnosis(<ReportPage />, {
+      electricFile,
+      result: fakeResult,
+      xgboostResult: fakeXgboostResult,
+    });
 
     expect(
       screen.getByRole("heading", { name: "탄소배출 진단 결과" }),
@@ -113,7 +177,11 @@ describe("ReportPage", () => {
   });
 
   it("renders the SHAP causes, month-over-month and comparison sections", () => {
-    renderWithDiagnosis(<ReportPage />, { electricFile, result: fakeResult });
+    renderWithDiagnosis(<ReportPage />, {
+      electricFile,
+      result: fakeResult,
+      xgboostResult: fakeXgboostResult,
+    });
 
     expect(screen.getByText("전기 사용량")).toBeInTheDocument();
     expect(screen.getByText("+42%")).toBeInTheDocument();
@@ -128,7 +196,11 @@ describe("ReportPage", () => {
   it("updates the simulation projection when a different degree is selected", async () => {
     const user = userEvent.setup();
 
-    renderWithDiagnosis(<ReportPage />, { electricFile, result: fakeResult });
+    renderWithDiagnosis(<ReportPage />, {
+      electricFile,
+      result: fakeResult,
+      xgboostResult: fakeXgboostResult,
+    });
 
     expect(screen.getByText("2.56t")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "3도" }));
@@ -136,7 +208,11 @@ describe("ReportPage", () => {
   });
 
   it("renders the AI summary, goal and cost savings cards", () => {
-    renderWithDiagnosis(<ReportPage />, { electricFile, result: fakeResult });
+    renderWithDiagnosis(<ReportPage />, {
+      electricFile,
+      result: fakeResult,
+      xgboostResult: fakeXgboostResult,
+    });
 
     expect(screen.getByText("AI 종합 의견")).toBeInTheDocument();
     expect(screen.getAllByText("69%").length).toBeGreaterThan(0);
@@ -149,7 +225,11 @@ describe("ReportPage", () => {
   });
 
   it("renders the grade band scale and the usage percentile gauge", () => {
-    renderWithDiagnosis(<ReportPage />, { electricFile, result: fakeResult });
+    renderWithDiagnosis(<ReportPage />, {
+      electricFile,
+      result: fakeResult,
+      xgboostResult: fakeXgboostResult,
+    });
 
     expect(screen.getByText("핵심 KPI")).toBeInTheDocument();
     // GradeBandScale is rendered twice (KPI card + trend forecast card):
@@ -164,12 +244,16 @@ describe("ReportPage", () => {
   });
 
   it("renders the emission cause tree and the AI evidence bullets", () => {
-    renderWithDiagnosis(<ReportPage />, { electricFile, result: fakeResult });
+    renderWithDiagnosis(<ReportPage />, {
+      electricFile,
+      result: fakeResult,
+      xgboostResult: fakeXgboostResult,
+    });
 
     expect(screen.getByText("원인 분석 (SHAP)")).toBeInTheDocument();
     expect(screen.getByText("총 배출량")).toBeInTheDocument();
-    expect(screen.getByText("냉방기기")).toBeInTheDocument();
-    expect(screen.getByText("조명·기타")).toBeInTheDocument();
+    expect(screen.getAllByText("전기").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("가스").length).toBeGreaterThan(0);
     expect(
       screen.getByText("동종업 평균보다 전기 사용량 27% 높음"),
     ).toBeInTheDocument();
@@ -177,17 +261,24 @@ describe("ReportPage", () => {
   });
 
   it("renders both trend-forecast scenarios side by side", () => {
-    renderWithDiagnosis(<ReportPage />, { electricFile, result: fakeResult });
+    renderWithDiagnosis(<ReportPage />, {
+      electricFile,
+      result: fakeResult,
+      xgboostResult: fakeXgboostResult,
+    });
 
     expect(screen.getByText("추세 예측")).toBeInTheDocument();
     expect(screen.getByText("현재 추세 유지 시")).toBeInTheDocument();
-    expect(screen.getByText("추천 액션 적용 시")).toBeInTheDocument();
     expect(screen.getByText("3.02t")).toBeInTheDocument();
     expect(screen.getAllByText("D").length).toBeGreaterThan(0);
   });
 
   it("renders the before/after comparison card", () => {
-    renderWithDiagnosis(<ReportPage />, { electricFile, result: fakeResult });
+    renderWithDiagnosis(<ReportPage />, {
+      electricFile,
+      result: fakeResult,
+      xgboostResult: fakeXgboostResult,
+    });
 
     expect(
       screen.getByText("개선 후 모습 (Before / After)"),
@@ -199,7 +290,11 @@ describe("ReportPage", () => {
   it("downloads a PDF when the download button is clicked", async () => {
     const user = userEvent.setup();
 
-    renderWithDiagnosis(<ReportPage />, { electricFile, result: fakeResult });
+    renderWithDiagnosis(<ReportPage />, {
+      electricFile,
+      result: fakeResult,
+      xgboostResult: fakeXgboostResult,
+    });
 
     await user.click(
       screen.getByRole("button", { name: "리포트 PDF 다운로드" }),
@@ -209,7 +304,11 @@ describe("ReportPage", () => {
   });
 
   it("links the actions CTA to the reduction-actions page", () => {
-    renderWithDiagnosis(<ReportPage />, { electricFile, result: fakeResult });
+    renderWithDiagnosis(<ReportPage />, {
+      electricFile,
+      result: fakeResult,
+      xgboostResult: fakeXgboostResult,
+    });
 
     expect(
       screen.getByRole("link", { name: "감축 액션 추천 보기" }),
@@ -217,7 +316,11 @@ describe("ReportPage", () => {
   });
 
   it("links the re-diagnose CTA back to the bill upload page", () => {
-    renderWithDiagnosis(<ReportPage />, { electricFile, result: fakeResult });
+    renderWithDiagnosis(<ReportPage />, {
+      electricFile,
+      result: fakeResult,
+      xgboostResult: fakeXgboostResult,
+    });
 
     expect(screen.getByRole("link", { name: "다시 진단받기" })).toHaveAttribute(
       "href",

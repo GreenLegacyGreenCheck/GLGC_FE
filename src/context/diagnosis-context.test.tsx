@@ -36,7 +36,7 @@ function Consumer() {
 
 describe("DiagnosisProvider", () => {
   afterEach(() => {
-    window.sessionStorage.clear();
+    window.localStorage.clear();
   });
 
   it("survives a page refresh: state set before unmount reappears in a freshly mounted provider", async () => {

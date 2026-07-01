@@ -46,7 +46,10 @@ function isRawOcrResult(value: unknown): value is RawOcrResult {
   );
 }
 
-export async function recognizeBillImage(file: File): Promise<RawOcrResult> {
+export async function recognizeBillImage(
+  file: File,
+  s3Key?: string,
+): Promise<RawOcrResult> {
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   if (!baseUrl) {
@@ -55,13 +58,24 @@ export async function recognizeBillImage(file: File): Promise<RawOcrResult> {
     );
   }
 
-  const formData = new FormData();
-  formData.set("image", file, file.name);
+  let response: Response;
 
-  const response = await fetch(`${baseUrl}${OCR_ENDPOINT_PATH}`, {
-    method: "POST",
-    body: formData,
-  });
+  if (s3Key) {
+    // Presigned URL 방식: S3 key만 JSON으로 전달
+    response = await fetch(`${baseUrl}/ocr/bill/s3`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ s3Key }),
+    });
+  } else {
+    // 기존 방식: 파일 직접 전송
+    const formData = new FormData();
+    formData.set("image", file, file.name);
+    response = await fetch(`${baseUrl}${OCR_ENDPOINT_PATH}`, {
+      method: "POST",
+      body: formData,
+    });
+  }
 
   if (!response.ok) {
     throw new Error(`OCR 요청이 실패했습니다. (status: ${response.status})`);

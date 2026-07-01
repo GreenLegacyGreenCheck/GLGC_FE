@@ -1,4 +1,42 @@
-const CACHE_NAME = "greencheck-v1";
+const CACHE_NAME = "greencheck-v3";
+
+// Web Push 알림 수신 — 백엔드가 web-push로 보낸 payload를 JSON으로 파싱해
+// 브라우저 알림을 표시한다. 앱이 꺼져 있어도 Service Worker가 살아있으면 동작.
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+
+  let data;
+  try {
+    data = event.data.json();
+  } catch {
+    return;
+  }
+
+  const title = data.title ?? "GreenCheck";
+  const options = {
+    body: data.body ?? "",
+    icon: "/icons/apple-touch-icon.png",
+    badge: "/icons/apple-touch-icon.png",
+    data: { url: data.url ?? "/" },
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// 알림 클릭 시 해당 URL로 이동
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url ?? "/";
+  event.waitUntil(
+    clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clientList) => {
+        const existing = clientList.find((c) => c.url.includes(url));
+        if (existing) return existing.focus();
+        return clients.openWindow(url);
+      }),
+  );
+});
 
 // 오프라인에서도 즉시 열 수 있도록 앱 셸과 오프라인 페이지를 미리 캐시한다.
 const PRECACHE_URLS = ["/", "/offline"];

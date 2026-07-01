@@ -7,6 +7,11 @@ import {
   updateNotificationSettings,
   type NotificationSettings,
 } from "@/lib/users-api";
+import {
+  requestNotifPermission,
+  writeNotifPrefs,
+} from "@/lib/notification-prefs";
+import { subscribePush, unsubscribePush } from "@/lib/push-api";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -67,16 +72,6 @@ const NOTIF_SETTINGS: {
     description: "탄소 진단이 완료되면 알려드려요",
   },
   {
-    id: "weeklyReport",
-    label: "주간 리포트 알림",
-    description: "매주 탄소 배출 요약 리포트를 보내드려요",
-  },
-  {
-    id: "goalAlert",
-    label: "절감 목표 달성 알림",
-    description: "절감 목표에 가까워지면 알려드려요",
-  },
-  {
     id: "appUpdate",
     label: "앱 업데이트 알림",
     description: "새 기능이 추가되면 알려드려요",
@@ -101,20 +96,56 @@ export default function NotificationsPage() {
     }
 
     getNotificationSettings(auth.token)
-      .then((result) => setSettings(result))
+      .then((result) => {
+        setSettings(result);
+        // 서버 설정을 로컬 캐시와 동기화
+        writeNotifPrefs({
+          diagnosisAlert: result.diagnosisAlert,
+          appUpdate: result.appUpdate,
+        });
+      })
       .catch(() => {});
   }, [auth.isHydrated, auth.token]);
 
-  const toggle = (id: NotifId) => {
+  const toggle = async (id: NotifId) => {
     const nextValue = !settings[id];
     setSettings((prev) => ({ ...prev, [id]: nextValue }));
+
+    // diagnosisAlert를 켤 때 브라우저 알림 권한 요청 + Push 구독
+    if (id === "diagnosisAlert") {
+      if (nextValue) {
+        const granted = await requestNotifPermission();
+        if (!granted) {
+          setSettings((prev) => ({ ...prev, diagnosisAlert: false }));
+          return;
+        }
+        // 로그인 상태면 백엔드에 Push 구독 등록
+        if (auth.token) {
+          subscribePush(auth.token).catch(() => {});
+        }
+      } else if (auth.token) {
+        // 끌 때 구독 해지
+        unsubscribePush(auth.token).catch(() => {});
+      }
+    }
+
+    // 실제 기능이 있는 항목만 로컬에 캐시한다
+    if (id === "diagnosisAlert" || id === "appUpdate") {
+      writeNotifPrefs({ [id]: nextValue });
+    }
+
+    // appUpdate를 켤 때 현재 버전을 "이미 본 버전"으로 기록한다.
+    // 이렇게 해야 토글 즉시 배너가 뜨지 않고, 다음 배포 이후에만 뜬다.
+    if (id === "appUpdate" && nextValue) {
+      const currentVersion = process.env.NEXT_PUBLIC_APP_VERSION ?? "0.1.0";
+      window.localStorage.setItem("glgc-last-seen-version", currentVersion);
+    }
 
     if (!auth.token) {
       return;
     }
 
     updateNotificationSettings(auth.token, { [id]: nextValue }).catch(() => {
-      // 저장 실패 시 화면 상태를 원래대로 되돌린다.
       setSettings((prev) => ({ ...prev, [id]: !nextValue }));
     });
   };

@@ -208,9 +208,10 @@ export function mergeXgboostResult(
     }
   }
 
-  if (monthlyComparison) {
-    merged.monthOverMonth = buildMonthOverMonth(monthlyComparison);
-  }
+  // 이전 달 데이터가 없으면 더미 값이 화면에 노출되지 않도록 빈 배열로 덮는다.
+  merged.monthOverMonth = monthlyComparison
+    ? buildMonthOverMonth(monthlyComparison)
+    : [];
 
   if (hasEsgAnswers && esgScore.s !== null && esgScore.g !== null) {
     const eScore = Math.round(esgScore.e.finalScore ?? 0);

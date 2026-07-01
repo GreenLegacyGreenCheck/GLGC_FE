@@ -6,6 +6,7 @@ import { classifyUser } from "./classification";
 import { createDiagnosis } from "./diagnosis-api";
 import { recognizeBillImage } from "./ocr";
 import { extractBillFields } from "./ocr-extract";
+import { uploadBillToS3 } from "./s3-upload";
 import { calculateScope2, toGasMegajoules } from "./scope2";
 
 export type PipelineStepId = "ocr" | "scope2" | "classify" | "report";
@@ -17,9 +18,16 @@ export type PipelineInput = {
   token?: string | null;
 };
 
+// S3 Presigned URL로 먼저 업로드 시도 — 실패하면 기존 multipart 방식으로 폴백
 async function recognizeAndExtract(file: File): Promise<OcrExtraction> {
-  const { text, confidence, words } = await recognizeBillImage(file);
+  let s3Key: string | undefined;
+  try {
+    s3Key = await uploadBillToS3(file);
+  } catch {
+    s3Key = undefined; // S3 설정 없거나 실패 시 기존 방식 사용
+  }
 
+  const { text, confidence, words } = await recognizeBillImage(file, s3Key);
   return extractBillFields(text, confidence, words);
 }
 

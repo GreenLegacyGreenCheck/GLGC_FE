@@ -2,6 +2,7 @@
 
 import BottomNavigation from "@/components/BottomNavigation";
 import { SproutIcon } from "@/components/icons";
+import { useAuth } from "@/context/auth-context";
 import { useDiagnosis } from "@/context/diagnosis-context";
 import { getActionPolicy } from "@/lib/diagnosis-api";
 import type {
@@ -74,7 +75,9 @@ function SproutSpinner() {
 
 export default function SupportPage() {
   const router = useRouter();
+  const { token } = useAuth();
   const { result, isHydrated, selectedActionCodes } = useDiagnosis();
+  const isLoggedIn = Boolean(token);
   const [programs, setPrograms] = useState<SupportProgram[]>([]);
   const [defaultActions, setDefaultActions] = useState<
     DefaultActionSuggestion[]
@@ -243,17 +246,25 @@ export default function SupportPage() {
               <p className="mt-2 text-base font-black">
                 진단 완료! 탄소 감축을 시작해 보세요
               </p>
-              <p className="mt-2 text-sm font-bold text-[#789b8c]">
-                로그인하면 리포트가 마이페이지에 자동 저장돼요.
-                <br />
-                정기 진단으로 감축 목표를 꾸준히 관리해 보세요.
-              </p>
-              <Link
-                href="/login"
-                className="mt-4 block w-full rounded-2xl bg-white px-5 py-3 text-center text-base font-black text-[#1ba77d]"
-              >
-                로그인하고 리포트 저장하기
-              </Link>
+              {!isLoggedIn ? (
+                <>
+                  <p className="mt-2 text-sm font-bold text-[#789b8c]">
+                    로그인하면 리포트가 마이페이지에 자동 저장돼요.
+                    <br />
+                    정기 진단으로 감축 목표를 꾸준히 관리해 보세요.
+                  </p>
+                  <Link
+                    href="/login"
+                    className="mt-4 block w-full rounded-2xl bg-white px-5 py-3 text-center text-base font-black text-[#1ba77d]"
+                  >
+                    로그인하고 리포트 저장하기
+                  </Link>
+                </>
+              ) : (
+                <p className="mt-2 text-sm font-bold text-[#789b8c]">
+                  정기 진단으로 감축 목표를 꾸준히 관리해 보세요.
+                </p>
+              )}
             </div>
           ) : null}
         </section>

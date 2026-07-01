@@ -114,7 +114,7 @@ describe("UploadPage", () => {
   });
 
   it("clears any previous ESG survey answers when starting a new diagnosis", async () => {
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       "glgc-diagnosis",
       JSON.stringify({
         address: "",
@@ -142,7 +142,7 @@ describe("UploadPage", () => {
 
     await waitFor(() => {
       const persisted = JSON.parse(
-        window.sessionStorage.getItem("glgc-diagnosis") ?? "{}",
+        window.localStorage.getItem("glgc-diagnosis") ?? "{}",
       );
       expect(persisted.esgSurveyAnswers).toBeNull();
     });
