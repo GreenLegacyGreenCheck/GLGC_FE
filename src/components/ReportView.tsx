@@ -274,7 +274,7 @@ type ReportViewProps = {
   address?: string;
   title?: string;
   ref?: Ref<HTMLDivElement>;
-  aiTopAction?: import("@/context/diagnosis-context").AiAction | null;
+  aiActions?: import("@/context/diagnosis-context").AiAction[] | null;
 };
 
 // Full content of a single diagnosis report — every section a photo-based
@@ -287,7 +287,7 @@ export default function ReportView({
   address,
   title = "탄소배출 진단 결과",
   ref,
-  aiTopAction,
+  aiActions,
 }: ReportViewProps) {
   const [selectedDegrees, setSelectedDegrees] = useState(2);
 
@@ -638,48 +638,95 @@ export default function ReportView({
         />
       </div>
 
-      {aiTopAction?.scenario ? (
-        <div className="mt-6 rounded-2xl bg-[#e8f7f0] p-5">
-          <div className="flex items-center gap-2">
-            <span className="rounded-full bg-[#1ba77d] px-3 py-1 text-xs font-black text-white">
+      {aiActions && aiActions.length > 0 ? (
+        <div className="mt-6">
+          <div className="mb-4 flex items-center gap-2">
+            <span className="size-2 rounded-full bg-[#1ba77d]" />
+            <h2 className="text-base font-black text-[#13261f]">
               맞춤 감축 액션 시나리오
-            </span>
-            <span className="text-sm font-black text-[#13261f]">
-              {aiTopAction.title}
-            </span>
+            </h2>
           </div>
-          <p className="mt-2 text-xs font-bold text-[#4a7a6a]">
-            이 액션을 실행한다면 어떻게 달라질까요?
+          <p className="mb-4 text-xs font-bold text-[#789b8c]">
+            AI가 이 업체의 탄소 배출 데이터를 분석해 추천한 감축 액션별 예상
+            효과예요.
           </p>
 
-          <div className="mt-4 flex gap-3">
-            <div className="flex-1 rounded-xl bg-white/70 p-4">
-              <p className="text-xs font-black text-[#789b8c]">Before</p>
-              <p className="mt-1 text-sm font-bold text-[#13261f] leading-relaxed">
-                {aiTopAction.scenario.beforeText}
-              </p>
-            </div>
-            <div className="flex-1 rounded-xl bg-[#1ba77d]/10 p-4">
-              <p className="text-xs font-black text-[#1ba77d]">After</p>
-              <p className="mt-1 text-sm font-bold text-[#13261f] leading-relaxed">
-                {aiTopAction.scenario.afterText}
-              </p>
-            </div>
-          </div>
+          <div className="flex flex-col gap-4">
+            {aiActions.map((action) => (
+              <div key={action.code} className="rounded-2xl bg-[#e8f7f0] p-5">
+                {/* 액션 제목 */}
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-[#1ba77d] px-3 py-1 text-xs font-black text-white">
+                    {action.difficulty}
+                  </span>
+                  <span className="text-sm font-black text-[#13261f]">
+                    {action.title}
+                  </span>
+                  <span className="ml-auto text-xs font-bold text-[#4a7a6a]">
+                    {action.costLabel}
+                  </span>
+                </div>
 
-          <div className="mt-3 flex gap-3">
-            <div className="flex-1 rounded-xl bg-white/70 p-3">
-              <p className="text-xs font-black text-[#789b8c]">절감 목표</p>
-              <p className="mt-1 text-sm font-black text-[#13261f]">
-                {aiTopAction.scenario.reductionGoalText}
-              </p>
-            </div>
-            <div className="flex-1 rounded-xl bg-white/70 p-3">
-              <p className="text-xs font-black text-[#789b8c]">비용 절감</p>
-              <p className="mt-1 text-sm font-black text-[#13261f]">
-                {aiTopAction.scenario.costSavingText}
-              </p>
-            </div>
+                {/* 추천 이유 */}
+                <p className="mt-3 text-xs font-bold text-[#4a7a6a] leading-relaxed">
+                  {action.reason.split("\n\n")[0]}
+                </p>
+
+                {/* Before / After */}
+                {action.scenario ? (
+                  <>
+                    <div className="mt-3 flex gap-2">
+                      <div className="flex-1 rounded-xl bg-white/70 p-3">
+                        <p className="text-xs font-black text-[#789b8c]">
+                          현재
+                        </p>
+                        <p className="mt-1 text-xs font-bold text-[#13261f] leading-relaxed">
+                          {action.scenario.beforeText}
+                        </p>
+                      </div>
+                      <div className="flex-1 rounded-xl bg-[#1ba77d]/15 p-3">
+                        <p className="text-xs font-black text-[#1ba77d]">
+                          개선 후
+                        </p>
+                        <p className="mt-1 text-xs font-bold text-[#13261f] leading-relaxed">
+                          {action.scenario.afterText}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-2 flex gap-2">
+                      <div className="flex-1 rounded-xl bg-white/70 p-3">
+                        <p className="text-xs font-black text-[#789b8c]">
+                          절감 목표
+                        </p>
+                        <p className="mt-1 text-xs font-black text-[#1ba77d]">
+                          {action.scenario.reductionGoalText}
+                        </p>
+                      </div>
+                      <div className="flex-1 rounded-xl bg-white/70 p-3">
+                        <p className="text-xs font-black text-[#789b8c]">
+                          비용 절감
+                        </p>
+                        <p className="mt-1 text-xs font-black text-[#13261f]">
+                          {action.scenario.costSavingText}
+                        </p>
+                      </div>
+                    </div>
+
+                    {action.scenario.evidenceText ? (
+                      <div className="mt-2 rounded-xl bg-white/50 p-3">
+                        <p className="text-xs font-black text-[#789b8c]">
+                          분석 근거
+                        </p>
+                        <p className="mt-1 text-xs font-bold text-[#4a7a6a] leading-relaxed">
+                          {action.scenario.evidenceText}
+                        </p>
+                      </div>
+                    ) : null}
+                  </>
+                ) : null}
+              </div>
+            ))}
           </div>
         </div>
       ) : null}

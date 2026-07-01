@@ -11,6 +11,7 @@ export type AiActionScenario = {
   afterText: string;
   reductionGoalText: string;
   costSavingText: string;
+  evidenceText: string;
 };
 
 export type AiAction = {

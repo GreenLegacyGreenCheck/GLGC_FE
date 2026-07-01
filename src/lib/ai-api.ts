@@ -54,6 +54,8 @@ function normalizeAction(
           typeof sc.reductionGoalText === "string" ? sc.reductionGoalText : "",
         costSavingText:
           typeof sc.costSavingText === "string" ? sc.costSavingText : "",
+        evidenceText:
+          typeof sc.evidenceText === "string" ? sc.evidenceText : "",
       };
     })(),
   };

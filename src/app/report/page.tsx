@@ -277,7 +277,7 @@ export default function ReportPage() {
             ref={reportRef}
             report={report}
             address={address}
-            aiTopAction={aiInsight.actions[0] ?? null}
+            aiActions={aiInsight.actions}
           />
 
           <button
