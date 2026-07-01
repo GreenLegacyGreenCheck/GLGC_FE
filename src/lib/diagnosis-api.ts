@@ -404,7 +404,7 @@ type RawXgboostEsgCategoryE = {
   final_score: number | null;
 };
 
-type RawEnergyGrade = {
+type RawKpi = {
   annual_emission_tco2: number;
 };
 
@@ -447,7 +447,7 @@ type RawCostSaving = {
 };
 
 type RawXgboostDiagnoseResponse = {
-  energy_grade: RawEnergyGrade;
+  kpi: RawKpi;
   cause_analysis: {
     total_emission_tco2: number;
     by_energy_source: {
@@ -501,7 +501,7 @@ function isRawEnergySourceBreakdown(
   );
 }
 
-function isRawEnergyGrade(value: unknown): value is RawEnergyGrade {
+function isRawKpi(value: unknown): value is RawKpi {
   if (typeof value !== "object" || value === null) return false;
   return (
     typeof (value as Record<string, unknown>).annual_emission_tco2 === "number"
@@ -597,7 +597,7 @@ function isRawXgboostDiagnoseResponse(
     isRawXgboostEsgCategoryE(esg.E) &&
     isOptionalNullableNumber(esg.S) &&
     isOptionalNullableNumber(esg.G) &&
-    isRawEnergyGrade(response.energy_grade) &&
+    isRawKpi(response.kpi) &&
     isRawAverageComparison(response.average_comparison) &&
     (response.monthly_comparison === null ||
       isRawMonthlyComparison(response.monthly_comparison)) &&
@@ -640,7 +640,7 @@ export async function diagnoseWithXgboost(
 
   return {
     energyGrade: {
-      annualEmissionTons: data.energy_grade.annual_emission_tco2,
+      annualEmissionTons: data.kpi.annual_emission_tco2,
     },
     causeAnalysis: {
       totalEmissionTons: data.cause_analysis.total_emission_tco2,
