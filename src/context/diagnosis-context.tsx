@@ -4,6 +4,14 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { EsgSurveyAnswers } from "@/lib/esg-survey";
 import type { XgboostDiagnoseResult } from "@/lib/diagnosis-api";
 
+// ai-api.ts가 이 파일의 RecommendedActionView를 import해서 순환 참조가 생기므로
+// AiInsightResult 타입을 여기에 직접 정의한다.
+export type AiInsightResult = {
+  aiSummary: string;
+  aiEvidenceBullets: { text: string; isPositive: boolean }[];
+  actionReasons: Record<string, string>;
+};
+
 export type UserType = "소상공인" | "일반가구" | "취약계층";
 
 export type OcrField<T> = {
@@ -64,12 +72,15 @@ type DiagnosisState = {
   // 채워지며, /report가 이 값이 있으면 더미 esgScores 대신 실제 응답 기반
   // 점수를 보여준다.
   esgSurveyAnswers: EsgSurveyAnswers | null;
-  // /report에서 XGBoost 결과로 AI 인사이트를 받으면 여기 저장한다.
-  // /actions 페이지가 이 값을 읽어 각 액션 카드에 개인화 이유를 보여준다.
+  // /analyzing 완료 후 미리 채워두면 /actions 페이지가 각 액션 카드에
+  // 개인화 이유를 즉시 보여줄 수 있다.
   aiActionReasons: Record<string, string> | null;
   // XGBoost 원인 분석 결과. /analyzing 완료 후 미리 채워두면 /report 진입 시
   // 로딩 없이 바로 표시된다. 세션 간 재진단 시에는 null로 초기화한다.
   xgboostResult: XgboostDiagnoseResult | null;
+  // Gemini AI 인사이트 전체. XGBoost가 끝난 뒤 /analyzing에서 미리 호출해
+  // 여기 저장해두면 /report가 스피너 없이 짠 하고 나타날 수 있다.
+  aiInsight: AiInsightResult | null;
 };
 
 const initialState: DiagnosisState = {
@@ -83,6 +94,7 @@ const initialState: DiagnosisState = {
   esgSurveyAnswers: null,
   aiActionReasons: null,
   xgboostResult: null,
+  aiInsight: null,
 };
 
 // localStorage를 쓰는 이유: 푸시 알림 클릭으로 새 탭이 열릴 때도
@@ -98,6 +110,7 @@ type PersistedDiagnosisState = Pick<
   | "esgSurveyAnswers"
   | "aiActionReasons"
   | "xgboostResult"
+  | "aiInsight"
 >;
 
 function readPersistedState(): PersistedDiagnosisState | null {
@@ -116,13 +129,14 @@ export type DiagnosisContextValue = DiagnosisState & {
   setAddress: (address: string) => void;
   setElectricFile: (file: File | null) => void;
   setGasFile: (file: File | null) => void;
-  setResult: (result: DiagnosisResult) => void;
+  setResult: (result: DiagnosisResult | null) => void;
   setStatus: (status: DiagnosisStatus, error?: string | null) => void;
   setUserTypeOverride: (userType: UserType) => void;
   setSelectedActionCodes: (codes: string[]) => void;
   setEsgSurveyAnswers: (answers: EsgSurveyAnswers | null) => void;
   setAiActionReasons: (reasons: Record<string, string>) => void;
   setXgboostResult: (result: XgboostDiagnoseResult | null) => void;
+  setAiInsight: (result: AiInsightResult | null) => void;
   reset: () => void;
 };
 
@@ -158,6 +172,7 @@ export function DiagnosisProvider({ children }: { children: React.ReactNode }) {
       esgSurveyAnswers: state.esgSurveyAnswers,
       aiActionReasons: state.aiActionReasons,
       xgboostResult: state.xgboostResult,
+      aiInsight: state.aiInsight,
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
   }, [
@@ -168,6 +183,7 @@ export function DiagnosisProvider({ children }: { children: React.ReactNode }) {
     state.esgSurveyAnswers,
     state.aiActionReasons,
     state.xgboostResult,
+    state.aiInsight,
   ]);
 
   const value = useMemo<DiagnosisContextValue>(
@@ -202,6 +218,8 @@ export function DiagnosisProvider({ children }: { children: React.ReactNode }) {
         setState((current) => ({ ...current, aiActionReasons })),
       setXgboostResult: (xgboostResult) =>
         setState((current) => ({ ...current, xgboostResult })),
+      setAiInsight: (aiInsight) =>
+        setState((current) => ({ ...current, aiInsight })),
       reset: () => {
         window.localStorage.removeItem(STORAGE_KEY);
         setState(initialState);

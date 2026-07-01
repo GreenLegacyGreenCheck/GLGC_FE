@@ -232,6 +232,7 @@ export type ActionPolicyResult = {
 export async function getActionPolicy(
   diagnosisId: string,
   actionCode: string,
+  reason?: string,
 ): Promise<ActionPolicyResult> {
   const empty: ActionPolicyResult = { programs: [], defaultActions: [] };
   const baseUrl = getBaseUrl();
@@ -241,6 +242,13 @@ export async function getActionPolicy(
   try {
     response = await fetch(
       `${baseUrl}/diagnosis/${diagnosisId}/actions/${actionCode}/policy`,
+      reason
+        ? {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reason }),
+          }
+        : undefined,
     );
   } catch {
     return empty;

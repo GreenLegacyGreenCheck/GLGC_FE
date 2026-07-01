@@ -25,6 +25,12 @@ vi.mock("@/lib/diagnosis-api", () => ({
   diagnoseWithXgboost: (...args: unknown[]) => diagnoseWithXgboost(...args),
 }));
 
+const getAiInsight = vi.fn();
+
+vi.mock("@/lib/ai-api", () => ({
+  getAiInsight: (...args: unknown[]) => getAiInsight(...args),
+}));
+
 const fakeEsgQuestions: EsgSurveyQuestion[] = [
   {
     id: "E-1",
@@ -91,6 +97,12 @@ describe("AnalyzingPage", () => {
     getEsgQuestions.mockResolvedValue(fakeEsgQuestions);
     diagnoseWithXgboost.mockReset();
     diagnoseWithXgboost.mockResolvedValue({});
+    getAiInsight.mockReset();
+    getAiInsight.mockResolvedValue({
+      aiSummary: "",
+      aiEvidenceBullets: [],
+      actionReasons: {},
+    });
   });
 
   it("redirects back to /upload when there is no electric bill in context", () => {

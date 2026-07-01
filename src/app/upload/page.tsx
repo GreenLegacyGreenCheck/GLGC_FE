@@ -606,7 +606,10 @@ export default function UploadPage() {
     setAddress,
     setElectricFile,
     setGasFile,
+    setResult,
+    setStatus,
     setEsgSurveyAnswers,
+    setAiInsight,
     setXgboostResult,
   } = useDiagnosis();
   const [electricFile, setLocalElectricFile] = useState<File | null>(null);
@@ -623,8 +626,11 @@ export default function UploadPage() {
     setAddress(address);
     // 새 진단을 시작할 때마다 이전 진단의 ESG 설문 응답과 XGBoost 결과를
     // 초기화해 스피너 없이 새 결과가 표시되게 한다.
+    setResult(null);
+    setStatus("idle");
     setEsgSurveyAnswers(null);
     setXgboostResult(null);
+    setAiInsight(null);
     router.push("/analyzing");
   };
 

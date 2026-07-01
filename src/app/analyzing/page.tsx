@@ -6,6 +6,7 @@ import { SparkleIcon, SproutIcon } from "@/components/icons";
 import { useAuth } from "@/context/auth-context";
 import { useDiagnosis } from "@/context/diagnosis-context";
 import { diagnoseWithXgboost, getEsgQuestions } from "@/lib/diagnosis-api";
+import { getAiInsight } from "@/lib/ai-api";
 import type { EsgSurveyAnswers, EsgSurveyQuestion } from "@/lib/esg-survey";
 import { runDiagnosisPipeline, type PipelineStepId } from "@/lib/pipeline";
 import { toGasMegajoules } from "@/lib/scope2";
@@ -74,6 +75,8 @@ export default function AnalyzingPage() {
     esgSurveyAnswers,
     setEsgSurveyAnswers,
     setXgboostResult,
+    setAiInsight,
+    setAiActionReasons,
   } = useDiagnosis();
   const { token } = useAuth();
   const [completedSteps, setCompletedSteps] = useState<Set<PipelineStepId>>(
@@ -176,12 +179,29 @@ export default function AnalyzingPage() {
         esgAnswers: hasAnswers ? esgSurveyAnswers : null,
         prevElecKwh: null,
       })
-        .then((xgboostResult) => setXgboostResult(xgboostResult))
+        .then((xgboostResult) => {
+          setXgboostResult(xgboostResult);
+          // XGBoost 완료 직후 Gemini AI 인사이트도 미리 받아둔다.
+          // /report 진입 시 둘 다 준비되어 있으면 스피너 없이 바로 렌더링된다.
+          return getAiInsight(xgboostResult, result.recommendedActions);
+        })
+        .then((insight) => {
+          setAiInsight(insight);
+          setAiActionReasons(insight.actionReasons);
+        })
         .catch(() => {});
 
       router.push("/user-type");
     }
-  }, [status, result, esgSurveyAnswers, router, setXgboostResult]);
+  }, [
+    status,
+    result,
+    esgSurveyAnswers,
+    router,
+    setXgboostResult,
+    setAiInsight,
+    setAiActionReasons,
+  ]);
 
   const handleOpenSurvey = () => {
     setSurveyPromptVisible(false);

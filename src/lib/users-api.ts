@@ -92,6 +92,21 @@ function getBaseUrl(): string {
   return baseUrl;
 }
 
+export async function deleteDiagnosis(
+  id: string,
+  token: string,
+): Promise<void> {
+  const baseUrl = getBaseUrl();
+  const response = await fetch(`${baseUrl}/diagnosis/${id}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(`리포트를 삭제하지 못했어요. (status: ${response.status})`);
+  }
+}
+
 export async function getMyDiagnoses(
   token: string,
 ): Promise<MyDiagnosesResult> {

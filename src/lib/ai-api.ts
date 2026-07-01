@@ -1,11 +1,10 @@
 import type { XgboostDiagnoseResult } from "./diagnosis-api";
-import type { RecommendedActionView } from "@/context/diagnosis-context";
+import type {
+  AiInsightResult,
+  RecommendedActionView,
+} from "@/context/diagnosis-context";
 
-export type AiInsightResult = {
-  aiSummary: string;
-  aiEvidenceBullets: { text: string; isPositive: boolean }[];
-  actionReasons: Record<string, string>;
-};
+export type { AiInsightResult };
 
 function isAiInsightResult(value: unknown): value is AiInsightResult {
   if (typeof value !== "object" || value === null) return false;

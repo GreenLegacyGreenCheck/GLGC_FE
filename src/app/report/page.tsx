@@ -6,7 +6,8 @@ import { RefreshIcon, SproutIcon } from "@/components/icons";
 import { useAuth } from "@/context/auth-context";
 import { useDiagnosis } from "@/context/diagnosis-context";
 import { diagnoseWithXgboost } from "@/lib/diagnosis-api";
-import { getAiInsight, type AiInsightResult } from "@/lib/ai-api";
+import { getAiInsight } from "@/lib/ai-api";
+import type { AiInsightResult } from "@/context/diagnosis-context";
 import { DUMMY_REPORT } from "@/lib/report-data";
 import { mergeXgboostResult } from "@/lib/report-merge";
 import { downloadReportPdf } from "@/lib/report-pdf";
@@ -42,15 +43,18 @@ export default function ReportPage() {
     setAiActionReasons,
     xgboostResult: persistedXgboostResult,
     setXgboostResult: persistXgboostResult,
+    aiInsight: persistedAiInsight,
+    setAiInsight: persistAiInsight,
   } = useDiagnosis();
   const { token } = useAuth();
   const [isDownloading, setIsDownloading] = useState(false);
-  const [aiInsight, setAiInsight] = useState<AiInsightResult | null>(null);
+  // 로컬 state는 마운트 시 context 값으로 초기화 — /analyzing에서 미리 채워두면
+  // 스피너 없이 바로 렌더링되고, 새로고침 시에는 여기서 재호출한다.
   const [xgboostResult, setXgboostResult] = useState(persistedXgboostResult);
+  const [aiInsight, setAiInsight] = useState<AiInsightResult | null>(
+    persistedAiInsight,
+  );
   const reportRef = useRef<HTMLDivElement>(null);
-  // Gemini는 XGBoost 결과 하나당 한 번만 호출한다 — context 업데이트로
-  // 컴포넌트가 리렌더링돼도 중복 호출되지 않도록 ref로 추적한다.
-  const aiInsightCalledRef = useRef(false);
   const isMountedRef = useRef(true);
   useEffect(() => {
     isMountedRef.current = true;
@@ -73,84 +77,70 @@ export default function ReportPage() {
     }
   }, [isHydrated, result, status, esgSurveyAnswers, router]);
 
-  // /analyzing이 XGBoost를 미리 실행해 context에 저장했으면(신규 진단 직후)
-  // 재호출 없이 AI 인사이트만 받아온다. context가 비어있으면(새 탭·새로고침)
-  // 전월 이력 조회부터 전체 플로우를 실행한다.
+  // /analyzing에서 XGBoost + Gemini를 미리 실행해 context에 저장했으면
+  // 둘 다 이미 로컬 state에 채워진 상태라 effect가 할 일 없이 바로 렌더링된다.
+  // context가 비어있으면(새 탭·새로고침) 부족한 부분만 채운다.
   useEffect(() => {
     if (!result) return;
+    // 둘 다 있으면 아무것도 할 필요 없음
+    if (xgboostResult && aiInsight) return;
 
     const hasAnswers = Boolean(
       esgSurveyAnswers && Object.keys(esgSurveyAnswers).length > 0,
     );
 
     async function run() {
-      if (xgboostResult) {
-        // XGBoost 결과가 이미 있으면 Gemini만 호출 (한 번만)
-        if (!aiInsightCalledRef.current) {
-          aiInsightCalledRef.current = true;
-          getAiInsight(xgboostResult, result?.recommendedActions ?? [])
-            .then((insight) => {
-              if (isMountedRef.current) {
-                setAiInsight(insight);
-                setAiActionReasons(insight.actionReasons);
-              }
-            })
-            .catch(() => {});
-        }
-        return;
-      }
+      let xgb = xgboostResult;
 
-      // 새 세션·새로고침: 전월 이력 조회 후 XGBoost 전체 실행
-      let prevElecKwh: number | null = null;
-      if (token) {
+      if (!xgb) {
+        // XGBoost 없으면 전월 이력 조회 후 실행
+        let prevElecKwh: number | null = null;
+        if (token) {
+          try {
+            const { diagnoses } = await getMyDiagnoses(token);
+            const previous = diagnoses.find(
+              (d) => d.id !== result?.diagnosisId && d.usageKwh !== null,
+            );
+            prevElecKwh = previous?.usageKwh ?? null;
+          } catch {
+            prevElecKwh = null;
+          }
+        }
+
+        if (!isMountedRef.current || !result) return;
+
         try {
-          const { diagnoses } = await getMyDiagnoses(token);
-          const previous = diagnoses.find(
-            (d) => d.id !== result?.diagnosisId && d.usageKwh !== null,
-          );
-          prevElecKwh = previous?.usageKwh ?? null;
+          xgb = await diagnoseWithXgboost({
+            elecKwh: result.electricOcr?.usageKwh.value ?? 0,
+            gasMj: toGasMegajoules(result.gasOcr?.usageM3.value ?? null),
+            deviceUsage: {},
+            esgAnswers: hasAnswers ? esgSurveyAnswers : null,
+            prevElecKwh,
+          });
         } catch {
-          prevElecKwh = null;
+          return;
         }
-      }
-
-      if (!isMountedRef.current || !result) return;
-
-      try {
-        const diagnoseResult = await diagnoseWithXgboost({
-          elecKwh: result.electricOcr?.usageKwh.value ?? 0,
-          gasMj: toGasMegajoules(result.gasOcr?.usageM3.value ?? null),
-          deviceUsage: {},
-          esgAnswers: hasAnswers ? esgSurveyAnswers : null,
-          prevElecKwh,
-        });
 
         if (!isMountedRef.current) return;
-
-        setXgboostResult(diagnoseResult);
-        persistXgboostResult(diagnoseResult);
-
-        if (!aiInsightCalledRef.current) {
-          aiInsightCalledRef.current = true;
-          getAiInsight(diagnoseResult, result?.recommendedActions ?? [])
-            .then((insight) => {
-              if (isMountedRef.current) {
-                setAiInsight(insight);
-                setAiActionReasons(insight.actionReasons);
-              }
-            })
-            .catch(() => {});
-        }
-      } catch {
-        // XGBoost 실패 시 더미 데이터로 리포트 표시
+        setXgboostResult(xgb);
+        persistXgboostResult(xgb);
       }
+
+      // Gemini: xgboostResult가 방금 채워졌거나 있었는데 aiInsight가 없는 경우
+      getAiInsight(xgb, result?.recommendedActions ?? [])
+        .then((insight) => {
+          if (isMountedRef.current) {
+            setAiInsight(insight);
+            persistAiInsight(insight);
+            setAiActionReasons(insight.actionReasons);
+          }
+        })
+        .catch(() => {});
     }
 
     run();
-    // persistXgboostResult·setAiActionReasons는 context setter라서 state가
-    // 바뀔 때마다 새 참조로 재생성된다 — deps에 넣으면 XGBoost/Gemini 호출
-    // 뒤 state 업데이트마다 effect가 재실행돼 Gemini가 반복 호출된다.
-    // xgboostResult도 제외: analyzing이 비동기로 채울 때 재실행 방지.
+    // context setter들은 매 렌더마다 새 참조 — deps에 넣으면 Gemini 응답 후
+    // effect가 재실행돼 무한 루프가 생긴다. xgboostResult/aiInsight도 제외.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result, esgSurveyAnswers, token]);
 
@@ -158,9 +148,9 @@ export default function ReportPage() {
     return null;
   }
 
-  // 분석 결과가 아직 없으면(새 탭·새로고침 시 XGBoost 응답 대기 중)
-  // 리포트 대신 새싹 스피너를 보여준다.
-  if (!xgboostResult) {
+  // XGBoost + Gemini 둘 다 준비되면 리포트를 한 번에 렌더링한다.
+  // 어느 하나라도 없으면 스피너로 대기한다.
+  if (!xgboostResult || !aiInsight) {
     return (
       <>
         <div className="scrollbar-hidden flex h-screen flex-col sm:h-full">
@@ -210,13 +200,11 @@ export default function ReportPage() {
     DUMMY_REPORT,
     xgboostResult,
     hasEsgAnswers,
-    aiInsight
-      ? {
-          aiSummary: aiInsight.aiSummary,
-          aiEvidenceBullets: aiInsight.aiEvidenceBullets,
-          aiActionReasons: aiInsight.actionReasons,
-        }
-      : undefined,
+    {
+      aiSummary: aiInsight.aiSummary,
+      aiEvidenceBullets: aiInsight.aiEvidenceBullets,
+      aiActionReasons: aiInsight.actionReasons,
+    },
   );
 
   const handleDownload = async () => {

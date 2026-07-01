@@ -66,6 +66,15 @@ const fakeXgboostResult: XgboostDiagnoseResult = {
   },
 };
 
+// /analyzing에서 미리 채워진 AI 인사이트 픽스처.
+// aiInsight를 context에 넣어두면 /report가 getAiInsight를 호출하지 않고
+// 즉시 렌더링된다.
+const fakeAiInsight = {
+  aiSummary: "AI 종합 의견입니다.",
+  aiEvidenceBullets: [] as { text: string; isPositive: boolean }[],
+  actionReasons: {} as Record<string, string>,
+};
+
 const replace = vi.fn();
 
 vi.mock("next/navigation", () => ({
@@ -164,6 +173,7 @@ describe("ReportPage", () => {
       electricFile,
       result: fakeResult,
       xgboostResult: fakeXgboostResult,
+      aiInsight: fakeAiInsight,
     });
 
     expect(
@@ -181,6 +191,7 @@ describe("ReportPage", () => {
       electricFile,
       result: fakeResult,
       xgboostResult: fakeXgboostResult,
+      aiInsight: fakeAiInsight,
     });
 
     expect(screen.getByText("전기 사용량")).toBeInTheDocument();
@@ -200,6 +211,7 @@ describe("ReportPage", () => {
       electricFile,
       result: fakeResult,
       xgboostResult: fakeXgboostResult,
+      aiInsight: fakeAiInsight,
     });
 
     expect(screen.getByText("2.56t")).toBeInTheDocument();
@@ -212,6 +224,7 @@ describe("ReportPage", () => {
       electricFile,
       result: fakeResult,
       xgboostResult: fakeXgboostResult,
+      aiInsight: fakeAiInsight,
     });
 
     expect(screen.getByText("AI 종합 의견")).toBeInTheDocument();
@@ -229,6 +242,7 @@ describe("ReportPage", () => {
       electricFile,
       result: fakeResult,
       xgboostResult: fakeXgboostResult,
+      aiInsight: fakeAiInsight,
     });
 
     expect(screen.getByText("핵심 KPI")).toBeInTheDocument();
@@ -248,6 +262,7 @@ describe("ReportPage", () => {
       electricFile,
       result: fakeResult,
       xgboostResult: fakeXgboostResult,
+      aiInsight: fakeAiInsight,
     });
 
     expect(screen.getByText("원인 분석 (SHAP)")).toBeInTheDocument();
@@ -265,6 +280,7 @@ describe("ReportPage", () => {
       electricFile,
       result: fakeResult,
       xgboostResult: fakeXgboostResult,
+      aiInsight: fakeAiInsight,
     });
 
     expect(screen.getByText("추세 예측")).toBeInTheDocument();
@@ -278,6 +294,7 @@ describe("ReportPage", () => {
       electricFile,
       result: fakeResult,
       xgboostResult: fakeXgboostResult,
+      aiInsight: fakeAiInsight,
     });
 
     expect(
@@ -294,6 +311,7 @@ describe("ReportPage", () => {
       electricFile,
       result: fakeResult,
       xgboostResult: fakeXgboostResult,
+      aiInsight: fakeAiInsight,
     });
 
     await user.click(
@@ -308,6 +326,7 @@ describe("ReportPage", () => {
       electricFile,
       result: fakeResult,
       xgboostResult: fakeXgboostResult,
+      aiInsight: fakeAiInsight,
     });
 
     expect(
@@ -320,6 +339,7 @@ describe("ReportPage", () => {
       electricFile,
       result: fakeResult,
       xgboostResult: fakeXgboostResult,
+      aiInsight: fakeAiInsight,
     });
 
     expect(screen.getByRole("link", { name: "다시 진단받기" })).toHaveAttribute(
@@ -369,6 +389,7 @@ const fakeXgboostBase = {
 
 describe("ReportPage XGBoost overlay", () => {
   it("overlays real emissions, grade and ESG scores once XGBoost responds", async () => {
+    getAiInsight.mockResolvedValue(fakeAiInsight);
     diagnoseWithXgboost.mockResolvedValue({
       ...fakeXgboostBase,
       esgScore: {
@@ -398,6 +419,7 @@ describe("ReportPage XGBoost overlay", () => {
   });
 
   it("keeps the dummy ESG scores when the survey was skipped, even if XGBoost responds", async () => {
+    getAiInsight.mockResolvedValue(fakeAiInsight);
     diagnoseWithXgboost.mockResolvedValue({
       ...fakeXgboostBase,
       esgScore: {
@@ -426,6 +448,7 @@ describe("ReportPage XGBoost overlay", () => {
   });
 
   it("shows real average comparison, a single trend scenario, goal and cost savings", async () => {
+    getAiInsight.mockResolvedValue(fakeAiInsight);
     diagnoseWithXgboost.mockResolvedValue({
       ...fakeXgboostBase,
       esgScore: {
@@ -471,6 +494,7 @@ describe("ReportPage XGBoost overlay", () => {
         trendSparkline: [1, 1.2],
       },
     });
+    getAiInsight.mockResolvedValue(fakeAiInsight);
     diagnoseWithXgboost.mockResolvedValue({
       ...fakeXgboostBase,
       esgScore: {

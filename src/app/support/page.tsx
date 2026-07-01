@@ -76,7 +76,8 @@ function SproutSpinner() {
 export default function SupportPage() {
   const router = useRouter();
   const { token } = useAuth();
-  const { result, isHydrated, selectedActionCodes } = useDiagnosis();
+  const { result, isHydrated, selectedActionCodes, aiActionReasons } =
+    useDiagnosis();
   const isLoggedIn = Boolean(token);
   const [programs, setPrograms] = useState<SupportProgram[]>([]);
   const [defaultActions, setDefaultActions] = useState<
@@ -100,7 +101,7 @@ export default function SupportPage() {
 
     Promise.all(
       selectedActionCodes.map((code) =>
-        getActionPolicy(result.diagnosisId, code),
+        getActionPolicy(result.diagnosisId, code, aiActionReasons?.[code]),
       ),
     ).then((results) => {
       if (!isCancelled) {
@@ -125,7 +126,7 @@ export default function SupportPage() {
     return () => {
       isCancelled = true;
     };
-  }, [result, selectedActionCodes]);
+  }, [result, selectedActionCodes, aiActionReasons]);
 
   if (!result) {
     return null;
