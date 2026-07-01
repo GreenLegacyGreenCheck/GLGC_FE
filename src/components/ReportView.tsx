@@ -638,105 +638,34 @@ export default function ReportView({
         />
       </div>
 
-      {aiActions && aiActions.length > 0 ? (
-        <div className="mt-6">
-          <div className="mb-4 flex items-center gap-2">
-            <span className="size-2 rounded-full bg-[#1ba77d]" />
-            <h2 className="text-base font-black text-[#13261f]">
-              맞춤 감축 액션 시나리오
-            </h2>
-          </div>
-          <p className="mb-4 text-xs font-bold text-[#789b8c]">
-            AI가 이 업체의 탄소 배출 데이터를 분석해 추천한 감축 액션별 예상
-            효과예요.
-          </p>
-
-          <div className="flex flex-col gap-4">
-            {aiActions.map((action) => (
-              <div key={action.code} className="rounded-2xl bg-[#e8f7f0] p-5">
-                {/* 액션 제목 */}
-                <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-[#1ba77d] px-3 py-1 text-xs font-black text-white">
-                    {action.difficulty}
-                  </span>
-                  <span className="text-sm font-black text-[#13261f]">
-                    {action.title}
-                  </span>
-                  <span className="ml-auto text-xs font-bold text-[#4a7a6a]">
-                    {action.costLabel}
-                  </span>
-                </div>
-
-                {/* 추천 이유 */}
-                <p className="mt-3 text-xs font-bold text-[#4a7a6a] leading-relaxed">
-                  {action.reason.split("\n\n")[0]}
-                </p>
-
-                {/* Before / After */}
-                {action.scenario ? (
-                  <>
-                    <div className="mt-3 flex gap-2">
-                      <div className="flex-1 rounded-xl bg-white/70 p-3">
-                        <p className="text-xs font-black text-[#789b8c]">
-                          현재
-                        </p>
-                        <p className="mt-1 text-xs font-bold text-[#13261f] leading-relaxed">
-                          {action.scenario.beforeText}
-                        </p>
-                      </div>
-                      <div className="flex-1 rounded-xl bg-[#1ba77d]/15 p-3">
-                        <p className="text-xs font-black text-[#1ba77d]">
-                          개선 후
-                        </p>
-                        <p className="mt-1 text-xs font-bold text-[#13261f] leading-relaxed">
-                          {action.scenario.afterText}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-2 flex gap-2">
-                      <div className="flex-1 rounded-xl bg-white/70 p-3">
-                        <p className="text-xs font-black text-[#789b8c]">
-                          절감 목표
-                        </p>
-                        <p className="mt-1 text-xs font-black text-[#1ba77d]">
-                          {action.scenario.reductionGoalText}
-                        </p>
-                      </div>
-                      <div className="flex-1 rounded-xl bg-white/70 p-3">
-                        <p className="text-xs font-black text-[#789b8c]">
-                          비용 절감
-                        </p>
-                        <p className="mt-1 text-xs font-black text-[#13261f]">
-                          {action.scenario.costSavingText}
-                        </p>
-                      </div>
-                    </div>
-
-                    {action.scenario.evidenceText ? (
-                      <div className="mt-2 rounded-xl bg-white/50 p-3">
-                        <p className="text-xs font-black text-[#789b8c]">
-                          분석 근거
-                        </p>
-                        <p className="mt-1 text-xs font-bold text-[#4a7a6a] leading-relaxed">
-                          {action.scenario.evidenceText}
-                        </p>
-                      </div>
-                    ) : null}
-                  </>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
       <div className="mt-6 rounded-2xl border border-[#eef3f0] bg-white p-5">
         <h2 className="text-base font-black">개선 후 모습 (Before / After)</h2>
         <p className="mt-1 text-xs font-bold text-[#789b8c]">
           {report.simulationLabel} 탄소 배출량이 어떻게 달라지는지 바로
           비교해보세요
         </p>
+
+        {aiActions?.[0]?.scenario ? (
+          <div className="mt-3 rounded-xl bg-[#e8f7f0] p-3">
+            <p className="text-xs font-black text-[#1ba77d]">
+              💡 {aiActions[0].title} 실행 시 AI 예측
+            </p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <div>
+                <p className="text-xs font-bold text-[#789b8c]">현재</p>
+                <p className="mt-0.5 text-xs font-bold text-[#13261f] leading-relaxed">
+                  {aiActions[0].scenario.beforeText}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-[#1ba77d]">개선 후</p>
+                <p className="mt-0.5 text-xs font-bold text-[#13261f] leading-relaxed">
+                  {aiActions[0].scenario.afterText}
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         <div className="mt-4 flex gap-2">
           {report.simulationOptions.map((option) => (
@@ -793,6 +722,22 @@ export default function ReportView({
           올해 목표 대비 현재 진행 상황이에요
         </p>
 
+        {aiActions?.[0]?.scenario?.reductionGoalText ? (
+          <div className="mt-3 rounded-xl bg-[#e8f7f0] p-3">
+            <p className="text-xs font-black text-[#1ba77d]">
+              💡 {aiActions[0].title} 실행 시 AI 예측
+            </p>
+            <p className="mt-1 text-xs font-bold text-[#13261f]">
+              {aiActions[0].scenario!.reductionGoalText}
+            </p>
+            {aiActions[0].scenario!.evidenceText ? (
+              <p className="mt-1 text-xs font-bold text-[#4a7a6a] leading-relaxed">
+                {aiActions[0].scenario!.evidenceText}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="mt-4 flex items-center justify-between gap-3">
           <div>
             <p className="text-xs font-bold text-[#789b8c]">현재</p>
@@ -835,6 +780,17 @@ export default function ReportView({
         <p className="mt-1 text-xs font-bold text-[#789b8c]">
           절감을 통해 아낄 수 있는 예상 비용이에요 · {report.costSavings.label}
         </p>
+
+        {aiActions?.[0]?.scenario?.costSavingText ? (
+          <div className="mt-3 rounded-xl bg-[#e8f7f0] p-3">
+            <p className="text-xs font-black text-[#1ba77d]">
+              💡 {aiActions[0].title} 실행 시 AI 예측
+            </p>
+            <p className="mt-1 text-xs font-bold text-[#13261f]">
+              {aiActions[0].scenario!.costSavingText}
+            </p>
+          </div>
+        ) : null}
 
         <div className="mt-4 flex items-center rounded-2xl bg-[#f2f6f3] py-4">
           <div className="flex-1 text-center">
