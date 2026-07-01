@@ -64,6 +64,18 @@ function normalizeAction(
           typeof sc.estimatedMonthlySavingsWon === "number"
             ? sc.estimatedMonthlySavingsWon
             : null,
+        currentAnnualCostWon:
+          typeof sc.currentAnnualCostWon === "number"
+            ? sc.currentAnnualCostWon
+            : null,
+        projectedAnnualCostWon:
+          typeof sc.projectedAnnualCostWon === "number"
+            ? sc.projectedAnnualCostWon
+            : null,
+        annualSavingsWon:
+          typeof sc.annualSavingsWon === "number" ? sc.annualSavingsWon : null,
+        costEvidenceText:
+          typeof sc.costEvidenceText === "string" ? sc.costEvidenceText : "",
       };
     })(),
   };

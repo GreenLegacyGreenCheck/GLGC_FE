@@ -15,6 +15,10 @@ export type AiActionScenario = {
   projectedTons: number | null;
   percentReduction: number | null;
   estimatedMonthlySavingsWon: number | null;
+  currentAnnualCostWon: number | null;
+  projectedAnnualCostWon: number | null;
+  annualSavingsWon: number | null;
+  costEvidenceText: string;
 };
 
 export type AiAction = {

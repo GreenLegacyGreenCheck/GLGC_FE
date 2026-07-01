@@ -851,24 +851,40 @@ export default function ReportView({
         ) : null}
 
         {(() => {
-          const aiMonthly =
-            aiActions?.[0]?.scenario?.estimatedMonthlySavingsWon ?? null;
-          const annualSavingsWon = aiMonthly != null ? aiMonthly * 12 : null;
-          const annualSavingsMan =
-            annualSavingsWon != null
-              ? Math.round(annualSavingsWon / 10000)
-              : null;
+          const sc = aiActions?.[0]?.scenario ?? null;
+          const toMan = (won: number) => `${Math.round(won / 10000)}만원`;
+          const hasAiCost =
+            sc?.currentAnnualCostWon != null &&
+            sc?.projectedAnnualCostWon != null;
+          const currentLabel = hasAiCost
+            ? toMan(sc!.currentAnnualCostWon!)
+            : report.costSavings.currentAnnualCostLabel;
+          const projectedLabel = hasAiCost
+            ? toMan(sc!.projectedAnnualCostWon!)
+            : report.costSavings.projectedAnnualCostLabel;
+          const savingsWon =
+            sc?.annualSavingsWon ??
+            (sc?.estimatedMonthlySavingsWon != null
+              ? sc.estimatedMonthlySavingsWon * 12
+              : null);
+          const savingsLabel =
+            savingsWon != null
+              ? `연간 약 ${toMan(savingsWon)} 절감 (AI 추론)`
+              : report.costSavings.annualSavingsLabel;
           return (
             <>
               <div className="mt-4 flex items-center rounded-2xl bg-[#f2f6f3] py-4">
                 <div className="flex-1 text-center">
-                  <p className="text-xs font-bold text-[#789b8c]">현재</p>
-                  <p className="mt-1 text-2xl font-black">
-                    {report.costSavings.currentAnnualCostLabel}
-                  </p>
-                  <p className="text-xs font-bold text-[#789b8c]">
-                    {report.costSavings.unitLabel}
-                  </p>
+                  <div className="flex items-center justify-center gap-1">
+                    <p className="text-xs font-bold text-[#789b8c]">현재</p>
+                    {hasAiCost && (
+                      <span className="rounded-full bg-[#789b8c] px-1.5 py-0.5 text-[10px] font-black text-white">
+                        AI
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-2xl font-black">{currentLabel}</p>
+                  <p className="text-xs font-bold text-[#789b8c]">/ 년</p>
                 </div>
                 <div aria-hidden="true" className="h-12 w-px bg-[#d8e7e0]" />
                 <div className="flex-1 text-center">
@@ -876,29 +892,28 @@ export default function ReportView({
                     <p className="text-xs font-bold text-[#789b8c]">
                       절감 후 예상
                     </p>
-                    {aiMonthly != null && (
+                    {hasAiCost && (
                       <span className="rounded-full bg-[#1ba77d] px-1.5 py-0.5 text-[10px] font-black text-white">
                         AI
                       </span>
                     )}
                   </div>
                   <p className="mt-1 text-2xl font-black text-[#1ba77d]">
-                    {aiMonthly != null
-                      ? `월 ${Math.round(aiMonthly / 10000)}만원`
-                      : report.costSavings.projectedAnnualCostLabel}
+                    {projectedLabel}
                   </p>
-                  <p className="text-xs font-bold text-[#789b8c]">
-                    {aiMonthly != null ? "절약" : report.costSavings.unitLabel}
-                  </p>
+                  <p className="text-xs font-bold text-[#789b8c]">/ 년</p>
                 </div>
               </div>
               <div className="mt-4 rounded-2xl bg-[#eef8f3] px-4 py-3">
                 <p className="flex items-center gap-1.5 text-sm font-black text-[#0d5f4b]">
                   <CoinIcon className="size-4 text-[#caa233]" />
-                  {annualSavingsMan != null
-                    ? `연간 약 ${annualSavingsMan}만원 절감 (AI 추론)`
-                    : report.costSavings.annualSavingsLabel}
+                  {savingsLabel}
                 </p>
+                {sc?.costEvidenceText ? (
+                  <p className="mt-1 text-xs font-bold text-[#4a7a6a]">
+                    {sc.costEvidenceText}
+                  </p>
+                ) : null}
               </div>
             </>
           );
