@@ -6,20 +6,44 @@ import type {
 
 export type { AiInsightResult };
 
-function isAiAction(value: unknown): boolean {
-  if (typeof value !== "object" || value === null) return false;
-  const item = value as Record<string, unknown>;
-  return (
-    typeof item.code === "string" &&
-    (item.icon === null || typeof item.icon === "string") &&
-    typeof item.title === "string" &&
-    typeof item.description === "string" &&
-    typeof item.difficulty === "string" &&
-    typeof item.costLabel === "string" &&
-    typeof item.expectedMinKg === "number" &&
-    typeof item.expectedMaxKg === "number" &&
-    typeof item.reason === "string"
-  );
+// 필드가 없거나 null/undefined여도 기본값으로 정규화한다.
+// 백엔드가 snake_case로 보낼 수도 있으므로 두 형태 모두 읽는다.
+function normalizeAction(
+  raw: unknown,
+): AiInsightResult["actions"][number] | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const item = raw as Record<string, unknown>;
+
+  const code = item.code;
+  const title = item.title;
+  if (typeof code !== "string" || typeof title !== "string") return null;
+
+  return {
+    code,
+    icon: typeof item.icon === "string" ? item.icon : null,
+    title,
+    description: typeof item.description === "string" ? item.description : "",
+    difficulty: typeof item.difficulty === "string" ? item.difficulty : "중간",
+    costLabel:
+      typeof item.costLabel === "string"
+        ? item.costLabel
+        : typeof item.cost_label === "string"
+          ? item.cost_label
+          : "",
+    expectedMinKg:
+      typeof item.expectedMinKg === "number"
+        ? item.expectedMinKg
+        : typeof item.expected_min_kg === "number"
+          ? item.expected_min_kg
+          : 0,
+    expectedMaxKg:
+      typeof item.expectedMaxKg === "number"
+        ? item.expectedMaxKg
+        : typeof item.expected_max_kg === "number"
+          ? item.expected_max_kg
+          : 0,
+    reason: typeof item.reason === "string" ? item.reason : "",
+  };
 }
 
 // 백엔드가 새 포맷(actions[])을 반환하면 그대로 쓰고,
@@ -30,8 +54,12 @@ function normalizeAiInsight(value: unknown): AiInsightResult | null {
   if (typeof item.aiSummary !== "string") return null;
   if (!Array.isArray(item.aiEvidenceBullets)) return null;
 
-  const actions = Array.isArray(item.actions)
-    ? (item.actions.filter(isAiAction) as AiInsightResult["actions"])
+  const actions: AiInsightResult["actions"] = Array.isArray(item.actions)
+    ? item.actions.reduce<AiInsightResult["actions"]>((acc, raw) => {
+        const normalized = normalizeAction(raw);
+        if (normalized) acc.push(normalized);
+        return acc;
+      }, [])
     : [];
 
   return {
