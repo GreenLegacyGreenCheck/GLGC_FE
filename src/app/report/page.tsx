@@ -193,7 +193,7 @@ export default function ReportPage() {
               />
               <SproutIcon className="size-10 text-[#1ba77d]" />
             </div>
-            <p className="text-sm font-bold text-[#789b8c]">
+            <p className="mt-5 text-sm font-bold text-[#789b8c]">
               리포트를 불러오고 있어요...
             </p>
           </div>
