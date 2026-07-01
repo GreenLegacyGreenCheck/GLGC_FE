@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useAuth } from "@/context/auth-context";
 import { loginWithGoogle } from "@/lib/auth-api";
 import { getGoogleRedirectUri } from "@/lib/oauth-urls";

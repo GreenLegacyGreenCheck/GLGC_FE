@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useAuth } from "@/context/auth-context";
 import { loginWithKakao } from "@/lib/auth-api";
 import { getKakaoRedirectUri } from "@/lib/oauth-urls";
