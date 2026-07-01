@@ -606,7 +606,6 @@ export default function UploadPage() {
     setAddress,
     setElectricFile,
     setGasFile,
-    setStatus,
     setEsgSurveyAnswers,
     setXgboostResult,
   } = useDiagnosis();
@@ -622,7 +621,6 @@ export default function UploadPage() {
     setElectricFile(electricFile);
     setGasFile(gasFile);
     setAddress(address);
-    setStatus("running");
     // 새 진단을 시작할 때마다 이전 진단의 ESG 설문 응답과 XGBoost 결과를
     // 초기화해 스피너 없이 새 결과가 표시되게 한다.
     setEsgSurveyAnswers(null);

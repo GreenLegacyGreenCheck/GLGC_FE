@@ -266,6 +266,7 @@ export default function AnalyzingPage() {
 
     hasStartedRef.current = true;
     setHasStarted(true);
+    setStatus("running");
     setErrorMessage(null);
 
     function resetStepQueue() {
