@@ -125,7 +125,16 @@ type PersistedDiagnosisState = Pick<
 function readPersistedState(): PersistedDiagnosisState | null {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as PersistedDiagnosisState) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PersistedDiagnosisState;
+    // aiInsight 포맷이 바뀌었을 때(actions 배열 없음) 구버전 데이터를 버린다.
+    if (
+      parsed.aiInsight &&
+      !Array.isArray((parsed.aiInsight as Record<string, unknown>).actions)
+    ) {
+      parsed.aiInsight = null;
+    }
+    return parsed;
   } catch {
     return null;
   }

@@ -126,7 +126,7 @@ export default function ReportPage() {
       }
 
       // Gemini: xgboostResult가 방금 채워졌거나 있었는데 aiInsight가 없는 경우
-      getAiInsight(xgb)
+      getAiInsight(xgb, result?.recommendedActions ?? [])
         .then((insight) => {
           if (isMountedRef.current) {
             setAiInsight(insight);

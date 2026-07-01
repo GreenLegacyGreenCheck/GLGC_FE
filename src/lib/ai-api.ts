@@ -1,5 +1,8 @@
 import type { XgboostDiagnoseResult } from "./diagnosis-api";
-import type { AiInsightResult } from "@/context/diagnosis-context";
+import type {
+  AiInsightResult,
+  RecommendedActionView,
+} from "@/context/diagnosis-context";
 
 export type { AiInsightResult };
 
@@ -19,15 +22,26 @@ function isAiAction(value: unknown): boolean {
   );
 }
 
-function isAiInsightResult(value: unknown): value is AiInsightResult {
-  if (typeof value !== "object" || value === null) return false;
+// 백엔드가 새 포맷(actions[])을 반환하면 그대로 쓰고,
+// 구버전 포맷(actionReasons: Record)이면 actions를 빈 배열로 정규화한다.
+function normalizeAiInsight(value: unknown): AiInsightResult | null {
+  if (typeof value !== "object" || value === null) return null;
   const item = value as Record<string, unknown>;
-  return (
-    typeof item.aiSummary === "string" &&
-    Array.isArray(item.aiEvidenceBullets) &&
-    Array.isArray(item.actions) &&
-    item.actions.every(isAiAction)
-  );
+  if (typeof item.aiSummary !== "string") return null;
+  if (!Array.isArray(item.aiEvidenceBullets)) return null;
+
+  const actions = Array.isArray(item.actions)
+    ? (item.actions.filter(isAiAction) as AiInsightResult["actions"])
+    : [];
+
+  return {
+    aiSummary: item.aiSummary,
+    aiEvidenceBullets: item.aiEvidenceBullets as {
+      text: string;
+      isPositive: boolean;
+    }[],
+    actions,
+  };
 }
 
 function getBaseUrl(): string {
@@ -41,10 +55,11 @@ function getBaseUrl(): string {
 }
 
 // XGBoost 분석 결과를 Gemini에 전달해 리포트 요약, 근거 문장, 개인화 감축 액션을
-// 생성한다. 액션은 Gemini가 에너지 데이터를 직접 추론해 생성하므로 백엔드의
-// recommendedActions에 의존하지 않는다.
+// 생성한다. 백엔드가 업데이트되면 actions[]를 반환하고, 아직 구버전이면
+// actions는 빈 배열로 처리해 폴백 UI가 동작한다.
 export async function getAiInsight(
   xgboost: XgboostDiagnoseResult,
+  actions: RecommendedActionView[] = [],
 ): Promise<AiInsightResult> {
   const baseUrl = getBaseUrl();
 
@@ -65,9 +80,10 @@ export async function getAiInsight(
       gasRatioPercent: xgboost.causeAnalysis.gasRatioPercent,
       diffVsNationalPercent: xgboost.averageComparison.diffVsNationalPercent,
       diffVsIndustryPercent: xgboost.averageComparison.diffVsIndustryPercent,
-      rankPercentile: xgboost.averageComparison.rankPercentile,
       rankedFactors: xgboost.causeAnalysis.rankedFactors,
-      comparisonMetrics: xgboost.causeAnalysis.comparisonMetrics,
+      // 기존 백엔드 호환: 추천 액션 코드 목록을 hint로 함께 전달한다.
+      // 백엔드가 업데이트되면 이 필드를 사용해 액션을 Gemini가 생성한다.
+      actions: actions.map((a) => ({ code: a.code, title: a.title })),
     }),
   });
 
@@ -78,10 +94,11 @@ export async function getAiInsight(
   }
 
   const data: unknown = await response.json();
+  const normalized = normalizeAiInsight(data);
 
-  if (!isAiInsightResult(data)) {
+  if (!normalized) {
     throw new Error("AI 인사이트 응답 형식이 올바르지 않습니다.");
   }
 
-  return data;
+  return normalized;
 }

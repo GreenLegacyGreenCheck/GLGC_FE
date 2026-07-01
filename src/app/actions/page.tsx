@@ -64,7 +64,7 @@ export default function ActionsPage() {
   const actions: ((typeof result.recommendedActions)[number] & {
     reason?: string;
   })[] =
-    aiInsight && aiInsight.actions.length > 0
+    aiInsight && (aiInsight.actions?.length ?? 0) > 0
       ? aiInsight.actions
       : result.recommendedActions;
 

@@ -182,7 +182,7 @@ export default function AnalyzingPage() {
           setXgboostResult(xgboostResult);
           // XGBoost 완료 직후 Gemini AI 인사이트도 미리 받아둔다.
           // /report 진입 시 둘 다 준비되어 있으면 스피너 없이 바로 렌더링된다.
-          return getAiInsight(xgboostResult);
+          return getAiInsight(xgboostResult, result.recommendedActions);
         })
         .then((insight) => {
           setAiInsight(insight);
