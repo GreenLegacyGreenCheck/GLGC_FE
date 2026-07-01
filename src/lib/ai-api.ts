@@ -56,6 +56,14 @@ function normalizeAction(
           typeof sc.costSavingText === "string" ? sc.costSavingText : "",
         evidenceText:
           typeof sc.evidenceText === "string" ? sc.evidenceText : "",
+        projectedTons:
+          typeof sc.projectedTons === "number" ? sc.projectedTons : null,
+        percentReduction:
+          typeof sc.percentReduction === "number" ? sc.percentReduction : null,
+        estimatedMonthlySavingsWon:
+          typeof sc.estimatedMonthlySavingsWon === "number"
+            ? sc.estimatedMonthlySavingsWon
+            : null,
       };
     })(),
   };

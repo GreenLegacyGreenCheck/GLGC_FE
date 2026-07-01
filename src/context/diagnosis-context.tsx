@@ -12,6 +12,9 @@ export type AiActionScenario = {
   reductionGoalText: string;
   costSavingText: string;
   evidenceText: string;
+  projectedTons: number | null;
+  percentReduction: number | null;
+  estimatedMonthlySavingsWon: number | null;
 };
 
 export type AiAction = {

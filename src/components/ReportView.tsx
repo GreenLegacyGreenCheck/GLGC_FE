@@ -685,35 +685,67 @@ export default function ReportView({
           ))}
         </div>
 
-        <div className="mt-5 flex items-end gap-4">
-          <div className="flex flex-1 flex-col items-center">
-            <div className="flex h-28 w-full max-w-16 items-end">
-              <div
-                className="w-full rounded-t-lg bg-[#e0a23a]"
-                style={{ height: `${beforeHeightPercent}%` }}
-              />
-            </div>
-            <p className="mt-2 text-lg font-black">{report.annualCo2Tons}t</p>
-            <p className="text-xs font-bold text-[#789b8c]">Before</p>
-          </div>
-          <span aria-hidden="true" className="pb-9 text-[#789b8c]"></span>
-          <div className="flex flex-1 flex-col items-center">
-            <div className="flex h-28 w-full max-w-16 items-end">
-              <div
-                className="w-full rounded-t-lg bg-[#1ba77d]"
-                style={{ height: `${afterHeightPercent}%` }}
-              />
-            </div>
-            <p className="mt-2 text-lg font-black text-[#1ba77d]">
-              {selectedSimulation.projectedTons}t
-            </p>
-            <p className="text-xs font-bold text-[#789b8c]">After</p>
-          </div>
-        </div>
-
-        <div className="mt-5 rounded-2xl bg-[#eef8f3] py-3 text-center text-2xl font-black text-[#1ba77d]">
-          {selectedSimulation.percentChange}%
-        </div>
+        {(() => {
+          const aiScenario = aiActions?.[0]?.scenario;
+          const aiProjected = aiScenario?.projectedTons ?? null;
+          const aiPct = aiScenario?.percentReduction ?? null;
+          const afterTons = aiProjected ?? selectedSimulation.projectedTons;
+          const pctLabel =
+            aiPct != null
+              ? `-${aiPct.toFixed(1)}%`
+              : `${selectedSimulation.percentChange}%`;
+          const maxTons = Math.max(report.annualCo2Tons, afterTons);
+          const bH = Math.round((report.annualCo2Tons / maxTons) * 100);
+          const aH = Math.round((afterTons / maxTons) * 100);
+          return (
+            <>
+              <div className="mt-5 flex items-end gap-4">
+                <div className="flex flex-1 flex-col items-center">
+                  <div className="flex h-28 w-full max-w-16 items-end">
+                    <div
+                      className="w-full rounded-t-lg bg-[#e0a23a]"
+                      style={{ height: `${bH}%` }}
+                    />
+                  </div>
+                  <p className="mt-2 text-lg font-black">
+                    {report.annualCo2Tons}t
+                  </p>
+                  <p className="text-xs font-bold text-[#789b8c]">Before</p>
+                </div>
+                <span aria-hidden="true" className="pb-9 text-[#789b8c]"></span>
+                <div className="flex flex-1 flex-col items-center">
+                  <div className="flex h-28 w-full max-w-16 items-end">
+                    <div
+                      className="w-full rounded-t-lg bg-[#1ba77d]"
+                      style={{ height: `${aH}%` }}
+                    />
+                  </div>
+                  <div className="mt-2 flex items-center gap-1">
+                    <p className="text-lg font-black text-[#1ba77d]">
+                      {afterTons.toFixed(2)}t
+                    </p>
+                    {aiProjected != null && (
+                      <span className="rounded-full bg-[#1ba77d] px-1.5 py-0.5 text-[10px] font-black text-white">
+                        AI
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs font-bold text-[#789b8c]">After</p>
+                </div>
+              </div>
+              <div className="mt-5 rounded-2xl bg-[#eef8f3] py-3 text-center">
+                <span className="text-2xl font-black text-[#1ba77d]">
+                  {pctLabel}
+                </span>
+                {aiPct != null && (
+                  <span className="ml-2 rounded-full bg-[#1ba77d] px-2 py-0.5 text-[10px] font-black text-white align-middle">
+                    AI 추론
+                  </span>
+                )}
+              </div>
+            </>
+          );
+        })()}
       </div>
 
       <div className="mt-6 rounded-2xl border border-[#eef3f0] bg-white p-5">
@@ -738,36 +770,62 @@ export default function ReportView({
           </div>
         ) : null}
 
-        <div className="mt-4 flex items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-bold text-[#789b8c]">현재</p>
-            <p className="mt-1 text-3xl font-black">
-              {report.goal.currentTons}t
-            </p>
-          </div>
-          <div className="mt-4 flex flex-1 items-center justify-center">
-            <ArrowRightIcon className="size-6 text-[#9bb3aa]" />
-          </div>
-          <div className="text-right">
-            <p className="text-xs font-bold text-[#789b8c]">목표</p>
-            <p className="mt-1 text-3xl font-black text-[#1ba77d]">
-              {report.goal.targetTons}t
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-5 h-3 w-full rounded-full bg-[#eef3f0]">
-          <div
-            className="h-full rounded-full bg-[#1ba77d]"
-            style={{ width: `${report.goal.progressPercent}%` }}
-          />
-        </div>
-        <div className="mt-2 flex items-center justify-between">
-          <p className="text-xs font-bold text-[#789b8c]">현재 진행률</p>
-          <p className="text-xl font-black text-[#1ba77d]">
-            {report.goal.progressPercent}%
-          </p>
-        </div>
+        {(() => {
+          const aiProjected = aiActions?.[0]?.scenario?.projectedTons ?? null;
+          const targetTons = aiProjected ?? report.goal.targetTons;
+          const reduction = report.goal.currentTons - targetTons;
+          const progressPct =
+            aiProjected != null
+              ? Math.max(
+                  0,
+                  Math.round((reduction / report.goal.currentTons) * 100),
+                )
+              : report.goal.progressPercent;
+          return (
+            <>
+              <div className="mt-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold text-[#789b8c]">현재</p>
+                  <p className="mt-1 text-3xl font-black">
+                    {report.goal.currentTons}t
+                  </p>
+                </div>
+                <div className="mt-4 flex flex-1 items-center justify-center">
+                  <ArrowRightIcon className="size-6 text-[#9bb3aa]" />
+                </div>
+                <div className="text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <p className="text-xs font-bold text-[#789b8c]">목표</p>
+                    {aiProjected != null && (
+                      <span className="rounded-full bg-[#1ba77d] px-1.5 py-0.5 text-[10px] font-black text-white">
+                        AI 추론
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-3xl font-black text-[#1ba77d]">
+                    {targetTons.toFixed(2)}t
+                  </p>
+                </div>
+              </div>
+              <div className="mt-5 h-3 w-full rounded-full bg-[#eef3f0]">
+                <div
+                  className="h-full rounded-full bg-[#1ba77d]"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+              <div className="mt-2 flex items-center justify-between">
+                <p className="text-xs font-bold text-[#789b8c]">
+                  {aiProjected != null
+                    ? "이 액션으로 달성 가능한 절감률"
+                    : "현재 진행률"}
+                </p>
+                <p className="text-xl font-black text-[#1ba77d]">
+                  {progressPct}%
+                </p>
+              </div>
+            </>
+          );
+        })()}
       </div>
 
       <div className="mt-6 rounded-2xl border border-[#eef3f0] bg-white p-5">
@@ -792,34 +850,59 @@ export default function ReportView({
           </div>
         ) : null}
 
-        <div className="mt-4 flex items-center rounded-2xl bg-[#f2f6f3] py-4">
-          <div className="flex-1 text-center">
-            <p className="text-xs font-bold text-[#789b8c]">현재</p>
-            <p className="mt-1 text-2xl font-black">
-              {report.costSavings.currentAnnualCostLabel}
-            </p>
-            <p className="text-xs font-bold text-[#789b8c]">
-              {report.costSavings.unitLabel}
-            </p>
-          </div>
-          <div aria-hidden="true" className="h-12 w-px bg-[#d8e7e0]" />
-          <div className="flex-1 text-center">
-            <p className="text-xs font-bold text-[#789b8c]">절감 후 예상</p>
-            <p className="mt-1 text-2xl font-black text-[#1ba77d]">
-              {report.costSavings.projectedAnnualCostLabel}
-            </p>
-            <p className="text-xs font-bold text-[#789b8c]">
-              {report.costSavings.unitLabel}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-4 rounded-2xl bg-[#eef8f3] px-4 py-3">
-          <p className="flex items-center gap-1.5 text-sm font-black text-[#0d5f4b]">
-            <CoinIcon className="size-4 text-[#caa233]" />
-            {report.costSavings.annualSavingsLabel}
-          </p>
-        </div>
+        {(() => {
+          const aiMonthly =
+            aiActions?.[0]?.scenario?.estimatedMonthlySavingsWon ?? null;
+          const annualSavingsWon = aiMonthly != null ? aiMonthly * 12 : null;
+          const annualSavingsMan =
+            annualSavingsWon != null
+              ? Math.round(annualSavingsWon / 10000)
+              : null;
+          return (
+            <>
+              <div className="mt-4 flex items-center rounded-2xl bg-[#f2f6f3] py-4">
+                <div className="flex-1 text-center">
+                  <p className="text-xs font-bold text-[#789b8c]">현재</p>
+                  <p className="mt-1 text-2xl font-black">
+                    {report.costSavings.currentAnnualCostLabel}
+                  </p>
+                  <p className="text-xs font-bold text-[#789b8c]">
+                    {report.costSavings.unitLabel}
+                  </p>
+                </div>
+                <div aria-hidden="true" className="h-12 w-px bg-[#d8e7e0]" />
+                <div className="flex-1 text-center">
+                  <div className="flex items-center justify-center gap-1">
+                    <p className="text-xs font-bold text-[#789b8c]">
+                      절감 후 예상
+                    </p>
+                    {aiMonthly != null && (
+                      <span className="rounded-full bg-[#1ba77d] px-1.5 py-0.5 text-[10px] font-black text-white">
+                        AI
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-2xl font-black text-[#1ba77d]">
+                    {aiMonthly != null
+                      ? `월 ${Math.round(aiMonthly / 10000)}만원`
+                      : report.costSavings.projectedAnnualCostLabel}
+                  </p>
+                  <p className="text-xs font-bold text-[#789b8c]">
+                    {aiMonthly != null ? "절약" : report.costSavings.unitLabel}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 rounded-2xl bg-[#eef8f3] px-4 py-3">
+                <p className="flex items-center gap-1.5 text-sm font-black text-[#0d5f4b]">
+                  <CoinIcon className="size-4 text-[#caa233]" />
+                  {annualSavingsMan != null
+                    ? `연간 약 ${annualSavingsMan}만원 절감 (AI 추론)`
+                    : report.costSavings.annualSavingsLabel}
+                </p>
+              </div>
+            </>
+          );
+        })()}
       </div>
 
       <div className="mt-6 rounded-2xl border border-[#eef3f0] bg-white p-5">
