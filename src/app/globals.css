@@ -1,26 +1,83 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f4f7f1;
+  --foreground: #17231f;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-system-sans);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Arial, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+}
+
+button,
+a,
+input {
+  font: inherit;
+}
+
+.scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes sprout-pulse-ring {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+
+.sprout-pulse-ring {
+  animation: sprout-pulse-ring 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes sprout-sway {
+  0%,
+  100% {
+    transform: rotate(-6deg);
+  }
+  50% {
+    transform: rotate(6deg);
+  }
+}
+
+.sprout-sway {
+  transform-origin: bottom center;
+  animation: sprout-sway 2.4s ease-in-out infinite;
+}
+
+@keyframes step-badge-pop {
+  0% {
+    transform: scale(0.55);
+  }
+  65% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.step-badge-pop {
+  animation: step-badge-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
