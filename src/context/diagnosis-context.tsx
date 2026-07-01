@@ -136,12 +136,22 @@ function readPersistedState(): PersistedDiagnosisState | null {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as PersistedDiagnosisState;
-    // aiInsight 포맷이 바뀌었을 때(actions 배열 없음) 구버전 데이터를 버린다.
-    if (
-      parsed.aiInsight &&
-      !Array.isArray((parsed.aiInsight as Record<string, unknown>).actions)
-    ) {
-      parsed.aiInsight = null;
+    // aiInsight 포맷이 바뀌었을 때 구버전 데이터를 버린다.
+    // 1) actions 배열 없음 → 구버전
+    // 2) actions[0].scenario 없음 → scenario 필드 추가 전 구버전
+    if (parsed.aiInsight) {
+      const insight = parsed.aiInsight as Record<string, unknown>;
+      const actions = insight.actions;
+      const firstAction =
+        Array.isArray(actions) && actions.length > 0
+          ? (actions[0] as Record<string, unknown>)
+          : null;
+      if (
+        !Array.isArray(actions) ||
+        (firstAction && !("scenario" in firstAction))
+      ) {
+        parsed.aiInsight = null;
+      }
     }
     return parsed;
   } catch {
