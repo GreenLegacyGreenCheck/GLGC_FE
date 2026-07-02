@@ -400,214 +400,233 @@ export type XgboostDiagnoseResult = {
   };
 };
 
-type RawXgboostEsgCategoryE = {
-  emission_score: number | null;
-  energy_score: number | null;
-  survey_score: number | null;
-  final_score: number | null;
-};
+// XGBoost 응답 스펙이 자주 바뀌므로 strict validator 대신 lenient 정규화로
+// 처리한다. 핵심 필드(kpi.annual_emission_tco2, cause_analysis)만 필수로
+// 확인하고, 나머지는 없으면 안전한 기본값으로 채운다.
+function normalizeXgboostResponse(raw: unknown): XgboostDiagnoseResult | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const r = raw as Record<string, unknown>;
 
-type RawKpi = {
-  annual_emission_tco2: number;
-};
+  // 필수: kpi 또는 energy_grade 에서 연간 배출량
+  const kpi = r.kpi as Record<string, unknown> | undefined;
+  const annualTco2 =
+    typeof kpi?.annual_emission_tco2 === "number"
+      ? kpi.annual_emission_tco2
+      : 0;
 
-type RawAverageComparison = {
-  national_avg_tco2: number;
-  industry_avg_tco2: number;
-  diff_vs_national_percent: number;
-  diff_vs_industry_percent: number;
-  zscore: number;
-  rank_percentile: number;
-};
-
-type RawMonthlyComparison = {
-  electricity: {
-    previous_kwh: number;
-    current_kwh: number;
-    change_percent: number;
-  };
-  carbon_emission: {
-    previous_tco2: number;
-    current_tco2: number;
-    change_percent: number;
-  };
-};
-
-type RawTrendPrediction = {
-  keep_current: { predicted_annual_tco2: number };
-};
-
-type RawReductionGoal = {
-  current_annual_tco2: number;
-  target_annual_tco2: number;
-  progress_percent: number;
-};
-
-type RawCostSaving = {
-  current_annual_cost_krw: number;
-  expected_annual_cost_krw: number;
-  expected_saving_krw: number;
-};
-
-type RawXgboostDiagnoseResponse = {
-  kpi: RawKpi;
-  cause_analysis: {
-    total_emission_tco2: number;
-    by_energy_source: {
-      electricity: { emission_tco2: number; ratio_percent: number };
-      gas: { emission_tco2: number; ratio_percent: number };
-    };
-    ranked_factors?: { factor: string; value_percent: number; rank: number }[];
-    comparison_metrics?: {
-      elec_vs_avg_percent: number;
-      gas_vs_avg_percent: number;
-      cooling_vs_avg_percent: number;
-    };
-  };
-  average_comparison: RawAverageComparison;
-  monthly_comparison: RawMonthlyComparison | null;
-  trend_prediction: RawTrendPrediction;
-  reduction_goal: RawReductionGoal;
-  cost_saving: RawCostSaving;
-  esg_score: {
-    E: RawXgboostEsgCategoryE;
-    S: number | null;
-    G: number | null;
-  };
-};
-
-function isOptionalNullableNumber(value: unknown): value is number | null {
-  return value === null || typeof value === "number";
-}
-
-function isRawXgboostEsgCategoryE(
-  value: unknown,
-): value is RawXgboostEsgCategoryE {
-  if (typeof value !== "object" || value === null) return false;
-  const item = value as Record<string, unknown>;
-  return (
-    isOptionalNullableNumber(item.emission_score) &&
-    isOptionalNullableNumber(item.energy_score) &&
-    isOptionalNullableNumber(item.survey_score) &&
-    isOptionalNullableNumber(item.final_score)
-  );
-}
-
-function isRawEnergySourceBreakdown(
-  value: unknown,
-): value is { emission_tco2: number; ratio_percent: number } {
-  if (typeof value !== "object" || value === null) return false;
-  const item = value as Record<string, unknown>;
-  return (
-    typeof item.emission_tco2 === "number" &&
-    typeof item.ratio_percent === "number"
-  );
-}
-
-function isRawKpi(value: unknown): value is RawKpi {
-  if (typeof value !== "object" || value === null) return false;
-  return (
-    typeof (value as Record<string, unknown>).annual_emission_tco2 === "number"
-  );
-}
-
-function isRawAverageComparison(value: unknown): value is RawAverageComparison {
-  if (typeof value !== "object" || value === null) return false;
-  const item = value as Record<string, unknown>;
-  return (
-    typeof item.national_avg_tco2 === "number" &&
-    typeof item.industry_avg_tco2 === "number" &&
-    typeof item.diff_vs_national_percent === "number" &&
-    typeof item.diff_vs_industry_percent === "number" &&
-    typeof item.zscore === "number" &&
-    typeof item.rank_percentile === "number"
-  );
-}
-
-function isRawMonthlyComparison(value: unknown): value is RawMonthlyComparison {
-  if (typeof value !== "object" || value === null) return false;
-  const item = value as Record<string, unknown>;
-  const electricity = item.electricity as Record<string, unknown> | undefined;
-  const carbon = item.carbon_emission as Record<string, unknown> | undefined;
-  return (
-    typeof electricity === "object" &&
-    electricity !== null &&
-    typeof electricity.previous_kwh === "number" &&
-    typeof electricity.current_kwh === "number" &&
-    typeof electricity.change_percent === "number" &&
-    typeof carbon === "object" &&
-    carbon !== null &&
-    typeof carbon.previous_tco2 === "number" &&
-    typeof carbon.current_tco2 === "number" &&
-    typeof carbon.change_percent === "number"
-  );
-}
-
-function isRawTrendPrediction(value: unknown): value is RawTrendPrediction {
-  if (typeof value !== "object" || value === null) return false;
-  const keepCurrent = (value as Record<string, unknown>).keep_current;
-  if (typeof keepCurrent !== "object" || keepCurrent === null) return false;
-  return (
-    typeof (keepCurrent as Record<string, unknown>).predicted_annual_tco2 ===
-    "number"
-  );
-}
-
-function isRawReductionGoal(value: unknown): value is RawReductionGoal {
-  if (typeof value !== "object" || value === null) return false;
-  const item = value as Record<string, unknown>;
-  return (
-    typeof item.current_annual_tco2 === "number" &&
-    typeof item.target_annual_tco2 === "number" &&
-    typeof item.progress_percent === "number"
-  );
-}
-
-function isRawCostSaving(value: unknown): value is RawCostSaving {
-  if (typeof value !== "object" || value === null) return false;
-  const item = value as Record<string, unknown>;
-  return (
-    typeof item.current_annual_cost_krw === "number" &&
-    typeof item.expected_annual_cost_krw === "number" &&
-    typeof item.expected_saving_krw === "number"
-  );
-}
-
-// XGBoost 서비스의 응답 스펙은 아직 자주 바뀐다(이미 한 번 cause_analysis가
-// 평평한 구조에서 by_energy_source 중첩 구조로 바뀌었다) — 우리가 실제로
-// 쓰는 필드만 좁게 검증하고, 모르는 필드가 추가되는 건 무시한다.
-function isRawXgboostDiagnoseResponse(
-  value: unknown,
-): value is RawXgboostDiagnoseResponse {
-  if (typeof value !== "object" || value === null) return false;
-  const response = value as Record<string, unknown>;
-  const cause = response.cause_analysis as Record<string, unknown> | undefined;
-  const esg = response.esg_score as Record<string, unknown> | undefined;
-
-  if (typeof cause !== "object" || cause === null) return false;
-  if (typeof esg !== "object" || esg === null) return false;
-
+  // cause_analysis
+  const cause = r.cause_analysis as Record<string, unknown> | undefined;
+  if (typeof cause !== "object" || cause === null) return null;
   const bySource = cause.by_energy_source as
     | Record<string, unknown>
     | undefined;
+  const elecSource = bySource?.electricity as
+    | Record<string, unknown>
+    | undefined;
+  const gasSource = bySource?.gas as Record<string, unknown> | undefined;
+  const totalTco2 =
+    typeof cause.total_emission_tco2 === "number"
+      ? cause.total_emission_tco2
+      : annualTco2;
+  const elecRatio =
+    typeof elecSource?.ratio_percent === "number"
+      ? elecSource.ratio_percent
+      : 100;
+  const gasRatio =
+    typeof gasSource?.ratio_percent === "number" ? gasSource.ratio_percent : 0;
+  const compMetrics = cause.comparison_metrics as
+    | Record<string, unknown>
+    | undefined;
+  const rankedFactors = Array.isArray(cause.ranked_factors)
+    ? (cause.ranked_factors as {
+        factor: string;
+        value_percent: number;
+        rank: number;
+      }[])
+    : [];
 
-  return (
-    typeof cause.total_emission_tco2 === "number" &&
-    typeof bySource === "object" &&
-    bySource !== null &&
-    isRawEnergySourceBreakdown(bySource.electricity) &&
-    isRawEnergySourceBreakdown(bySource.gas) &&
-    isRawXgboostEsgCategoryE(esg.E) &&
-    isOptionalNullableNumber(esg.S) &&
-    isOptionalNullableNumber(esg.G) &&
-    isRawKpi(response.kpi) &&
-    isRawAverageComparison(response.average_comparison) &&
-    (response.monthly_comparison === null ||
-      isRawMonthlyComparison(response.monthly_comparison)) &&
-    isRawTrendPrediction(response.trend_prediction) &&
-    isRawReductionGoal(response.reduction_goal) &&
-    isRawCostSaving(response.cost_saving)
-  );
+  // average_comparison
+  const avg = r.average_comparison as Record<string, unknown> | undefined;
+  const nationalAvg =
+    typeof avg?.national_avg_tco2 === "number" ? avg.national_avg_tco2 : 0;
+  const industryAvg =
+    typeof avg?.industry_avg_tco2 === "number" ? avg.industry_avg_tco2 : 0;
+  const diffNational =
+    typeof avg?.diff_vs_national_percent === "number"
+      ? avg.diff_vs_national_percent
+      : 0;
+  const diffIndustry =
+    typeof avg?.diff_vs_industry_percent === "number"
+      ? avg.diff_vs_industry_percent
+      : 0;
+  const zScore = typeof avg?.zscore === "number" ? avg.zscore : 0;
+  const rankPercentile =
+    typeof avg?.rank_percentile === "number" ? avg.rank_percentile : 0;
+
+  // monthly_comparison (optional)
+  let monthlyComparison: XgboostDiagnoseResult["monthlyComparison"] = null;
+  const mc = r.monthly_comparison as Record<string, unknown> | null | undefined;
+  if (mc && typeof mc === "object") {
+    const elec = mc.electricity as Record<string, unknown> | undefined;
+    const carbon = mc.carbon_emission as Record<string, unknown> | undefined;
+    if (
+      elec &&
+      carbon &&
+      typeof elec.previous_kwh === "number" &&
+      typeof elec.current_kwh === "number"
+    ) {
+      monthlyComparison = {
+        electricity: {
+          previousKwh: elec.previous_kwh as number,
+          currentKwh: elec.current_kwh as number,
+          changePercent:
+            typeof elec.change_percent === "number"
+              ? (elec.change_percent as number)
+              : 0,
+        },
+        carbonEmission: {
+          previousTons:
+            typeof carbon.previous_tco2 === "number"
+              ? (carbon.previous_tco2 as number)
+              : 0,
+          currentTons:
+            typeof carbon.current_tco2 === "number"
+              ? (carbon.current_tco2 as number)
+              : 0,
+          changePercent:
+            typeof carbon.change_percent === "number"
+              ? (carbon.change_percent as number)
+              : 0,
+        },
+      };
+    }
+  }
+
+  // trend_prediction — 신형: predicted_annual_tco2 직접 / 구형: keep_current.predicted_annual_tco2
+  const trend = r.trend_prediction as Record<string, unknown> | undefined;
+  const keepCurrent = trend?.keep_current as
+    | Record<string, unknown>
+    | undefined;
+  const predictedTco2 =
+    typeof trend?.predicted_annual_tco2 === "number"
+      ? (trend.predicted_annual_tco2 as number)
+      : typeof keepCurrent?.predicted_annual_tco2 === "number"
+        ? (keepCurrent.predicted_annual_tco2 as number)
+        : annualTco2;
+
+  // reduction_goal — 신형: current_grade/remaining만 있고 tco2 없는 경우도 처리
+  const goal = r.reduction_goal as Record<string, unknown> | undefined;
+  const currentGoalTco2 =
+    typeof goal?.current_annual_tco2 === "number"
+      ? (goal.current_annual_tco2 as number)
+      : annualTco2;
+  const remaining =
+    typeof goal?.remaining_reduction_tco2 === "number"
+      ? (goal.remaining_reduction_tco2 as number)
+      : 0;
+  const targetGoalTco2 =
+    typeof goal?.target_annual_tco2 === "number"
+      ? (goal.target_annual_tco2 as number)
+      : remaining === 0
+        ? currentGoalTco2
+        : currentGoalTco2 - remaining;
+  const progressPercent =
+    typeof goal?.progress_percent === "number"
+      ? (goal.progress_percent as number)
+      : remaining === 0
+        ? 100
+        : currentGoalTco2 > 0
+          ? Math.round(((currentGoalTco2 - remaining) / currentGoalTco2) * 100)
+          : 100;
+
+  // cost_saving
+  const cost = r.cost_saving as Record<string, unknown> | undefined;
+  const currentCostKrw =
+    typeof cost?.current_annual_cost_krw === "number"
+      ? (cost.current_annual_cost_krw as number)
+      : 0;
+  const savingKrw =
+    typeof cost?.expected_saving_krw === "number"
+      ? (cost.expected_saving_krw as number)
+      : 0;
+  const expectedCostKrw =
+    typeof cost?.expected_annual_cost_krw === "number"
+      ? (cost.expected_annual_cost_krw as number)
+      : currentCostKrw - savingKrw;
+
+  // esg_score (optional — 없으면 전부 null)
+  const esg = r.esg_score as Record<string, unknown> | undefined;
+  const esgE = esg?.E as Record<string, unknown> | undefined;
+
+  return {
+    energyGrade: { annualEmissionTons: annualTco2 },
+    causeAnalysis: {
+      totalEmissionTons: totalTco2,
+      elecRatioPercent: elecRatio,
+      gasRatioPercent: gasRatio,
+      rankedFactors: rankedFactors.map((f) => ({
+        factor: f.factor,
+        valuePercent: f.value_percent,
+        rank: f.rank,
+      })),
+      comparisonMetrics: {
+        elecVsAvgPercent:
+          typeof compMetrics?.elec_vs_avg_percent === "number"
+            ? (compMetrics.elec_vs_avg_percent as number)
+            : 0,
+        gasVsAvgPercent:
+          typeof compMetrics?.gas_vs_avg_percent === "number"
+            ? (compMetrics.gas_vs_avg_percent as number)
+            : 0,
+        coolingVsAvgPercent:
+          typeof compMetrics?.cooling_vs_avg_percent === "number"
+            ? (compMetrics.cooling_vs_avg_percent as number)
+            : 0,
+      },
+    },
+    averageComparison: {
+      nationalAverageTons: nationalAvg,
+      industryAverageTons: industryAvg,
+      diffVsNationalPercent: diffNational,
+      diffVsIndustryPercent: diffIndustry,
+      zScore,
+      rankPercentile,
+    },
+    monthlyComparison,
+    trendPrediction: { predictedAnnualTons: predictedTco2 },
+    reductionGoal: {
+      currentAnnualTons: currentGoalTco2,
+      targetAnnualTons: targetGoalTco2,
+      progressPercent,
+    },
+    costSaving: {
+      currentAnnualCostKrw: currentCostKrw,
+      expectedAnnualCostKrw: expectedCostKrw,
+      expectedSavingKrw: savingKrw,
+    },
+    esgScore: {
+      e: {
+        emissionScore:
+          typeof esgE?.emission_score === "number"
+            ? (esgE.emission_score as number)
+            : null,
+        energyScore:
+          typeof esgE?.energy_score === "number"
+            ? (esgE.energy_score as number)
+            : null,
+        surveyScore:
+          typeof esgE?.survey_score === "number"
+            ? (esgE.survey_score as number)
+            : null,
+        finalScore:
+          typeof esgE?.final_score === "number"
+            ? (esgE.final_score as number)
+            : null,
+      },
+      s: typeof esg?.S === "number" ? (esg.S as number) : null,
+      g: typeof esg?.G === "number" ? (esg.G as number) : null,
+    },
+  };
 }
 
 // 원인 분석 + ESG 점수 계산 — 백엔드가 XGBoost 서비스(POST /xgboost-diagnose)를
