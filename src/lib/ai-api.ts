@@ -76,6 +76,19 @@ function normalizeAction(
           typeof sc.annualSavingsWon === "number" ? sc.annualSavingsWon : null,
         costEvidenceText:
           typeof sc.costEvidenceText === "string" ? sc.costEvidenceText : "",
+        projectedTonsByDegree: (() => {
+          const d = sc.projectedTonsByDegree;
+          if (typeof d !== "object" || d === null) return null;
+          const r = d as Record<string, unknown>;
+          if (
+            typeof r["1"] === "number" &&
+            typeof r["2"] === "number" &&
+            typeof r["3"] === "number"
+          ) {
+            return { "1": r["1"], "2": r["2"], "3": r["3"] };
+          }
+          return null;
+        })(),
       };
     })(),
   };

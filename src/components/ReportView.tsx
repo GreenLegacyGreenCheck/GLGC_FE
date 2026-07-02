@@ -659,19 +659,34 @@ export default function ReportView({
 
         {(() => {
           const aiScenario = aiActions?.[0]?.scenario;
+          const byDegree = aiScenario?.projectedTonsByDegree ?? null;
+          // 온도별 값이 있으면 선택된 도수에 맞는 값 사용, 없으면 단일 AI 값
+          const aiProjectedForDegree = byDegree
+            ? (byDegree[String(selectedDegrees) as "1" | "2" | "3"] ?? null)
+            : (aiScenario?.projectedTons ?? null);
           const aiProjected = aiScenario?.projectedTons ?? null;
           const aiPct = aiScenario?.percentReduction ?? null;
-          // HVAC·냉난방 관련 액션만 온도 시나리오가 의미 있음
+          // 온도별 값이 있으면 무조건 온도 버튼 표시, 없으면 HVAC만
           const isTemperatureSensitive =
+            byDegree != null ||
             !aiProjected ||
             ["HVAC", "HEATING", "COOLING", "INSULATION"].some((k) =>
               (aiActions?.[0]?.code ?? "").toUpperCase().includes(k),
             );
-          const afterTons = aiProjected ?? selectedSimulation.projectedTons;
+          const afterTons =
+            aiProjectedForDegree ?? selectedSimulation.projectedTons;
+          const computedPct =
+            aiProjectedForDegree != null && report.annualCo2Tons > 0
+              ? ((report.annualCo2Tons - aiProjectedForDegree) /
+                  report.annualCo2Tons) *
+                100
+              : null;
           const pctLabel =
-            aiPct != null
-              ? `-${aiPct.toFixed(1)}%`
-              : `${selectedSimulation.percentChange}%`;
+            computedPct != null
+              ? `-${computedPct.toFixed(1)}%`
+              : aiPct != null
+                ? `-${aiPct.toFixed(1)}%`
+                : `${selectedSimulation.percentChange}%`;
           const maxTons = Math.max(report.annualCo2Tons, afterTons);
           const bH = Math.round((report.annualCo2Tons / maxTons) * 100);
           const aH = Math.round((afterTons / maxTons) * 100);

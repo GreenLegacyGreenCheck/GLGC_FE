@@ -19,6 +19,7 @@ export type AiActionScenario = {
   projectedAnnualCostWon: number | null;
   annualSavingsWon: number | null;
   costEvidenceText: string;
+  projectedTonsByDegree: { "1": number; "2": number; "3": number } | null;
 };
 
 export type AiAction = {
