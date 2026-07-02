@@ -168,6 +168,10 @@ function DownloadModal({
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
+function fmtDate(d: Date) {
+  return `${d.getFullYear()}. ${String(d.getMonth() + 1).padStart(2, "0")}. ${String(d.getDate()).padStart(2, "0")}.`;
+}
+
 function DraftPageInner() {
   const searchParams = useSearchParams();
   const programTitle = searchParams.get("title") ?? "";
@@ -178,6 +182,12 @@ function DraftPageInner() {
     result?.gasOcr?.supplyAddress.value ??
     "";
 
+  // 설치 기간 자동 계산: 신청일+3 ~ 신청일+12
+  const startD = new Date();
+  startD.setDate(startD.getDate() + 3);
+  const endD = new Date();
+  endD.setDate(endD.getDate() + 12);
+
   const [form, setForm] = useState({
     name: "",
     birthDate: "",
@@ -185,9 +195,9 @@ function DraftPageInner() {
     landlinePhone: "",
     mobilePhone: "",
     email: "",
-    installLocation: "",
-    installStartDate: "",
-    installEndDate: "",
+    installLocation: "자택 베란다", // 베란다형 태양광 기본값
+    installStartDate: fmtDate(startD),
+    installEndDate: fmtDate(endD),
     bank: "",
     accountNumber: "",
   });

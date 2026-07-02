@@ -16,57 +16,60 @@ export type SolarApplicationData = {
   signatureDataUrl: string | null;
 };
 
-// ─── Coordinate map for 별지 제1호 서식 ─────────────────────────────────────
-// A4 PDF: width=595.28pt, height=841.89pt  (y=0 at BOTTOM, y increases upward)
-// Row height ≈ 20pt. 연락처는 레이블+값 두 줄이므로 총 40pt.
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Coordinate map (별지 제1호, A4 = 595.28 x 841.89pt, y=0 at BOTTOM) ────
+// 이미지 출력 결과 기반 보정:
+//   성명~설치기간: 이전값 -38pt  /  보조금~계좌: -34pt  /  날짜~서명: -90pt
 const COORDS = {
-  name: { x: 175, y: 688, size: 10 },
-  birthDate: { x: 393, y: 688, size: 10 },
-  address: { x: 170, y: 668, size: 10 },
-  // 연락처: 레이블 행(648)과 값 행(628) 두 줄 — 값 행에 맞춤
-  landlinePhone: { x: 135, y: 626, size: 9 },
-  mobilePhone: { x: 270, y: 626, size: 9 },
-  email: { x: 392, y: 626, size: 9 },
-  installLocation: { x: 170, y: 606, size: 10 },
-  installPeriod: { x: 170, y: 586, size: 10 },
-  bankName: { x: 282, y: 508, size: 10 },
-  accountHolder: { x: 428, y: 508, size: 10 },
-  accountNumber: { x: 190, y: 488, size: 10 },
-  dateYear: { x: 258, y: 358, size: 11 },
-  applicantName: { x: 395, y: 332, size: 11 },
-  signatureImg: { x: 453, y: 321, width: 50, height: 28 },
+  name: { x: 175, y: 650, size: 10 },
+  birthDate: { x: 393, y: 650, size: 10 },
+  address: { x: 170, y: 630, size: 10 },
+  landlinePhone: { x: 135, y: 590, size: 9 },
+  mobilePhone: { x: 270, y: 590, size: 9 },
+  email: { x: 392, y: 590, size: 9 },
+  installLocation: { x: 170, y: 570, size: 10 },
+  installPeriod: { x: 170, y: 550, size: 10 },
+  bankName: { x: 282, y: 474, size: 10 },
+  accountHolder: { x: 428, y: 474, size: 10 },
+  accountNumber: { x: 190, y: 454, size: 10 },
+  dateYear: { x: 258, y: 268, size: 11 },
+  applicantName: { x: 395, y: 243, size: 11 },
+  signatureImg: { x: 453, y: 232, width: 50, height: 28 },
 } as const;
 
 // ─── 기존 샘플 데이터를 흰 사각형으로 덮는 영역 ──────────────────────────────
-// 각 항목의 값 셀 영역을 커버. 폼 경계선을 침범하지 않도록 좌우 1~2pt 여유.
 const CLEAR_BOXES = [
-  { x: 149, y: 677, w: 147, h: 20 }, // 성명
-  { x: 370, y: 677, w: 170, h: 20 }, // 생년월일
-  { x: 149, y: 657, w: 390, h: 20 }, // 주소
-  { x: 130, y: 615, w: 112, h: 20 }, // 일반전화 (값 행)
-  { x: 247, y: 615, w: 140, h: 20 }, // 휴대전화 (값 행)
-  { x: 387, y: 615, w: 153, h: 20 }, // 전자메일 (값 행)
-  { x: 144, y: 595, w: 396, h: 20 }, // 설치장소
-  { x: 144, y: 575, w: 396, h: 20 }, // 설치기간
-  { x: 257, y: 497, w: 117, h: 20 }, // 은행명
-  { x: 409, y: 497, w: 130, h: 20 }, // 예금주
-  { x: 184, y: 477, w: 355, h: 20 }, // 계좌번호
-  { x: 244, y: 347, w: 258, h: 22 }, // 날짜
-  { x: 353, y: 319, w: 130, h: 24 }, // 신청인 이름 + (인)
+  { x: 149, y: 638, w: 147, h: 20 }, // 성명
+  { x: 370, y: 638, w: 170, h: 20 }, // 생년월일
+  { x: 149, y: 618, w: 390, h: 20 }, // 주소
+  { x: 130, y: 578, w: 112, h: 20 }, // 일반전화
+  { x: 247, y: 578, w: 140, h: 20 }, // 휴대전화
+  { x: 387, y: 578, w: 153, h: 20 }, // 전자메일
+  { x: 144, y: 558, w: 396, h: 20 }, // 설치장소
+  { x: 144, y: 538, w: 396, h: 20 }, // 설치기간
+  { x: 257, y: 462, w: 117, h: 20 }, // 은행명
+  { x: 409, y: 462, w: 130, h: 20 }, // 예금주
+  { x: 184, y: 442, w: 355, h: 20 }, // 계좌번호
+  { x: 244, y: 256, w: 258, h: 22 }, // 날짜
+  { x: 353, y: 231, w: 130, h: 24 }, // 신청인 이름 + (인)
 ] as const;
 
 async function loadFont(pdfDoc: PDFDocument) {
   pdfDoc.registerFontkit(fontkit);
-  try {
-    const res = await fetch("/fonts/NotoSansKR-Regular.otf");
-    if (!res.ok) throw new Error("font fetch failed");
-    const bytes = await res.arrayBuffer();
-    return pdfDoc.embedFont(bytes);
-  } catch {
-    // Korean characters won't render but form structure is preserved
-    return pdfDoc.embedFont("Helvetica");
+  // NanumGothic TTF: 전체 한글 커버리지, pdf-lib 호환성 좋음
+  for (const path of [
+    "/fonts/NanumGothic-Regular.ttf",
+    "/fonts/NotoSansKR-Regular.otf",
+  ]) {
+    try {
+      const res = await fetch(path);
+      if (!res.ok) continue;
+      const bytes = await res.arrayBuffer();
+      return await pdfDoc.embedFont(bytes);
+    } catch {
+      continue;
+    }
   }
+  return pdfDoc.embedFont("Helvetica");
 }
 
 export async function fillSolarApplicationPdf(
@@ -145,7 +148,6 @@ export async function fillSolarApplicationPdf(
     COORDS.applicantName.size,
   );
 
-  // Place signature image at (인) position
   if (data.signatureDataUrl) {
     const base64 = data.signatureDataUrl.split(",")[1];
     if (base64) {
