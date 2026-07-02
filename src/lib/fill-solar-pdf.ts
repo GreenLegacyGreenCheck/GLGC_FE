@@ -17,30 +17,44 @@ export type SolarApplicationData = {
 };
 
 // ─── Coordinate map for 별지 제1호 서식 ─────────────────────────────────────
-// A4 PDF: width=595.28pt, height=841.89pt
-// pdf-lib uses bottom-left origin, so y = pageHeight - distanceFromTop
-//
-// To calibrate: adjust values until text lands inside the correct cell.
-// Use browser DevTools with the PDF open: (pixel from top) * (72 / 96) ≈ pt from top
-// then y = 841.89 - ptFromTop
+// A4 PDF: width=595.28pt, height=841.89pt  (y=0 at BOTTOM, y increases upward)
+// Row height ≈ 20pt. 연락처는 레이블+값 두 줄이므로 총 40pt.
 // ─────────────────────────────────────────────────────────────────────────────
 const COORDS = {
   name: { x: 175, y: 688, size: 10 },
-  birthDate: { x: 388, y: 688, size: 10 },
+  birthDate: { x: 393, y: 688, size: 10 },
   address: { x: 170, y: 668, size: 10 },
-  landlinePhone: { x: 135, y: 643, size: 9 },
-  mobilePhone: { x: 285, y: 643, size: 9 },
-  email: { x: 398, y: 643, size: 9 },
-  installLocation: { x: 170, y: 621, size: 10 },
-  installPeriod: { x: 170, y: 601, size: 10 },
-  bankName: { x: 282, y: 522, size: 10 },
-  accountHolder: { x: 428, y: 522, size: 10 },
-  accountNumber: { x: 170, y: 502, size: 10 },
+  // 연락처: 레이블 행(648)과 값 행(628) 두 줄 — 값 행에 맞춤
+  landlinePhone: { x: 135, y: 626, size: 9 },
+  mobilePhone: { x: 270, y: 626, size: 9 },
+  email: { x: 392, y: 626, size: 9 },
+  installLocation: { x: 170, y: 606, size: 10 },
+  installPeriod: { x: 170, y: 586, size: 10 },
+  bankName: { x: 282, y: 508, size: 10 },
+  accountHolder: { x: 428, y: 508, size: 10 },
+  accountNumber: { x: 190, y: 488, size: 10 },
   dateYear: { x: 258, y: 358, size: 11 },
   applicantName: { x: 395, y: 332, size: 11 },
-  // (인) stamp position: image placed just to the right of 신청인 이름
-  signatureImg: { x: 455, y: 323, width: 48, height: 26 },
+  signatureImg: { x: 453, y: 321, width: 50, height: 28 },
 } as const;
+
+// ─── 기존 샘플 데이터를 흰 사각형으로 덮는 영역 ──────────────────────────────
+// 각 항목의 값 셀 영역을 커버. 폼 경계선을 침범하지 않도록 좌우 1~2pt 여유.
+const CLEAR_BOXES = [
+  { x: 149, y: 677, w: 147, h: 20 }, // 성명
+  { x: 370, y: 677, w: 170, h: 20 }, // 생년월일
+  { x: 149, y: 657, w: 390, h: 20 }, // 주소
+  { x: 130, y: 615, w: 112, h: 20 }, // 일반전화 (값 행)
+  { x: 247, y: 615, w: 140, h: 20 }, // 휴대전화 (값 행)
+  { x: 387, y: 615, w: 153, h: 20 }, // 전자메일 (값 행)
+  { x: 144, y: 595, w: 396, h: 20 }, // 설치장소
+  { x: 144, y: 575, w: 396, h: 20 }, // 설치기간
+  { x: 257, y: 497, w: 117, h: 20 }, // 은행명
+  { x: 409, y: 497, w: 130, h: 20 }, // 예금주
+  { x: 184, y: 477, w: 355, h: 20 }, // 계좌번호
+  { x: 244, y: 347, w: 258, h: 22 }, // 날짜
+  { x: 353, y: 319, w: 130, h: 24 }, // 신청인 이름 + (인)
+] as const;
 
 async function loadFont(pdfDoc: PDFDocument) {
   pdfDoc.registerFontkit(fontkit);
@@ -67,6 +81,18 @@ export async function fillSolarApplicationPdf(
 
   const page = pdfDoc.getPages()[0];
   const black = rgb(0, 0, 0);
+  const white = rgb(1, 1, 1);
+
+  // 기존 샘플 데이터 제거
+  for (const box of CLEAR_BOXES) {
+    page.drawRectangle({
+      x: box.x,
+      y: box.y,
+      width: box.w,
+      height: box.h,
+      color: white,
+    });
+  }
 
   function draw(text: string, x: number, y: number, size = 10) {
     if (!text.trim()) return;
