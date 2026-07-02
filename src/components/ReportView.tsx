@@ -638,16 +638,18 @@ export default function ReportView({
             <p className="text-xs font-black text-[#1ba77d]">
               💡 {aiActions[0].title} 실행 시 AI 예측
             </p>
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <div>
-                <p className="text-xs font-bold text-[#789b8c]">현재</p>
-                <p className="mt-0.5 text-xs font-bold text-[#13261f] leading-relaxed">
+            <div className="mt-2 divide-y divide-[#c8ece1]">
+              <div className="grid grid-cols-[3rem,1fr] gap-x-3 py-2">
+                <p className="text-xs font-black text-[#789b8c] pt-0.5">현재</p>
+                <p className="text-xs font-bold text-[#13261f] leading-relaxed">
                   {aiActions[0].scenario.beforeText}
                 </p>
               </div>
-              <div>
-                <p className="text-xs font-bold text-[#1ba77d]">개선 후</p>
-                <p className="mt-0.5 text-xs font-bold text-[#13261f] leading-relaxed">
+              <div className="grid grid-cols-[3rem,1fr] gap-x-3 py-2">
+                <p className="text-xs font-black text-[#1ba77d] pt-0.5">
+                  개선 후
+                </p>
+                <p className="text-xs font-bold text-[#13261f] leading-relaxed">
                   {aiActions[0].scenario.afterText}
                 </p>
               </div>
