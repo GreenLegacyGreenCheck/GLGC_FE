@@ -263,15 +263,22 @@ export async function getActionPolicy(
   // 이전 스키마: { data: [...], default_actions: [...] } — 폴백 유지
   const rawPrograms = Array.isArray(raw.data) ? raw.data : [];
 
-  const programs = rawPrograms.filter(isRawPolicyItem).map((item) => ({
-    title: item.name,
-    actionTitle: item.action_name ?? "",
-    description: item.action_des ?? "",
-    documents: item.need ?? "",
-    link: item.url,
-    difficulty: item.level ?? "",
-    carbonSaving: item.saving ?? "",
-  }));
+  const programs = rawPrograms.filter(isRawPolicyItem).map((item) => {
+    const raw = item as Record<string, unknown>;
+    return {
+      title: item.name,
+      actionTitle: item.action_name ?? "",
+      description: item.action_des ?? "",
+      documents: item.need ?? "",
+      link: item.url,
+      difficulty: item.level ?? "",
+      carbonSaving: item.saving ?? "",
+      source: typeof raw.source === "string" ? raw.source : undefined,
+      takes: typeof raw.takes === "string" ? raw.takes : undefined,
+      time: typeof raw.time === "string" ? raw.time : undefined,
+      target: typeof raw.target === "string" ? raw.target : undefined,
+    };
+  });
 
   const rawDefaultActions = Array.isArray(raw.default_actions)
     ? raw.default_actions

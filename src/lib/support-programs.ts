@@ -9,6 +9,11 @@ export type SupportProgram = {
   link: string;
   difficulty: string;
   carbonSaving: string;
+  // 백엔드 RAG 응답 추가 필드
+  source?: string; // 지원 기관 (e.g. "중소벤처기업부")
+  takes?: string; // 지원 규모 (e.g. "최대 300만원")
+  time?: string; // 접수 기간 (e.g. "2026.04.27 ~ 2026.11.30")
+  target?: string; // 대상 (e.g. "일반가구")
 };
 
 // RAG에 맞춤 매칭이 없을 때 대신 내려주는 일반 안내 항목. 링크/난이도/절감액처럼
