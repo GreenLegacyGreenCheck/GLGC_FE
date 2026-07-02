@@ -188,9 +188,15 @@ export default function ActionsPage() {
                         {action.description}
                       </p>
                       {"reason" in action && action.reason ? (
-                        <p className="mt-2 rounded-xl bg-[#eef8f3] px-3 py-2 text-xs font-bold text-[#0d5f4b]">
-                          ✦ {action.reason}
-                        </p>
+                        <div className="mt-2 rounded-xl bg-[#eef8f3] px-3 py-2.5">
+                          <p className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wide text-[#1ba77d]">
+                            <BoltIcon className="size-3" />
+                            AI 추천 근거
+                          </p>
+                          <p className="mt-1 text-xs font-bold leading-relaxed text-[#0d5f4b]">
+                            {action.reason}
+                          </p>
+                        </div>
                       ) : null}
                       <div className="mt-3 flex flex-wrap gap-2">
                         <span className="rounded-full bg-[#dff1ea] px-3 py-1 text-xs font-black text-[#1ba77d]">

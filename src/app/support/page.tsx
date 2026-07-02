@@ -307,9 +307,11 @@ export default function SupportPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        alert(
-                          `서류 초안 기능은 준비 중이에요.\n\n필요 서류: ${program.documents || "정보 없음"}`,
-                        );
+                        const params = new URLSearchParams({
+                          title: program.title ?? "",
+                          documents: program.documents ?? "",
+                        });
+                        router.push(`/support/draft?${params.toString()}`);
                       }}
                       className="block w-full rounded-2xl border-2 border-[#1ba77d] bg-white px-5 py-3 text-center text-base font-black text-[#1ba77d]"
                     >
