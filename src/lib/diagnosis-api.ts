@@ -179,28 +179,22 @@ export async function getDiagnosis(id: string): Promise<DiagnosisDetail> {
   return data;
 }
 
+// 백엔드 RAG 응답의 실제 스키마
+// { name, action_name, action_des, need, url, level, saving, ... }
 type RawPolicyItem = {
-  title: string;
-  action_title: string;
-  description: string;
-  documents: string;
-  link: string;
-  difficulty: string;
-  carbon_saving: string;
+  name: string;
+  action_name: string;
+  action_des: string;
+  need: string;
+  url: string;
+  level: string;
+  saving: string;
 };
 
 function isRawPolicyItem(value: unknown): value is RawPolicyItem {
   if (typeof value !== "object" || value === null) return false;
   const item = value as Record<string, unknown>;
-  return (
-    typeof item.title === "string" &&
-    typeof item.action_title === "string" &&
-    typeof item.description === "string" &&
-    typeof item.documents === "string" &&
-    typeof item.link === "string" &&
-    typeof item.difficulty === "string" &&
-    typeof item.carbon_saving === "string"
-  );
+  return typeof item.name === "string" && typeof item.url === "string";
 }
 
 type RawDefaultAction = {
@@ -264,24 +258,25 @@ export async function getActionPolicy(
     return empty;
   }
 
-  const { data: rawPrograms, default_actions: rawDefaultActions } =
-    data as Record<string, unknown>;
+  const raw = data as Record<string, unknown>;
+  // 새 스키마: { status, data: [...], total_count, ... }
+  // 이전 스키마: { data: [...], default_actions: [...] } — 폴백 유지
+  const rawPrograms = Array.isArray(raw.data) ? raw.data : [];
 
-  const programs = Array.isArray(rawPrograms)
-    ? rawPrograms.filter(isRawPolicyItem).map((item) => ({
-        title: item.title,
-        actionTitle: item.action_title,
-        description: item.description,
-        documents: item.documents,
-        link: item.link,
-        difficulty: item.difficulty,
-        carbonSaving: item.carbon_saving,
-      }))
-    : [];
+  const programs = rawPrograms.filter(isRawPolicyItem).map((item) => ({
+    title: item.name,
+    actionTitle: item.action_name ?? "",
+    description: item.action_des ?? "",
+    documents: item.need ?? "",
+    link: item.url,
+    difficulty: item.level ?? "",
+    carbonSaving: item.saving ?? "",
+  }));
 
-  const defaultActions = Array.isArray(rawDefaultActions)
-    ? rawDefaultActions.filter(isRawDefaultAction)
+  const rawDefaultActions = Array.isArray(raw.default_actions)
+    ? raw.default_actions
     : [];
+  const defaultActions = rawDefaultActions.filter(isRawDefaultAction);
 
   return { programs, defaultActions };
 }
