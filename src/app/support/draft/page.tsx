@@ -91,13 +91,13 @@ function DownloadModal({
   isWorking: boolean;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-5">
       <div
         className="absolute inset-0 bg-black/40"
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="relative z-10 w-full max-w-sm rounded-t-3xl bg-white px-5 pb-10 pt-6">
+      <div className="relative z-10 w-full max-w-sm rounded-3xl bg-white px-5 pb-8 pt-6">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-black">다운로드 형식 선택</h2>
           <button
