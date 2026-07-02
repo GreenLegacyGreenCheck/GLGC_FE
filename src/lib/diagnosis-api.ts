@@ -655,80 +655,11 @@ export async function diagnoseWithXgboost(
   }
 
   const data: unknown = await response.json();
+  const normalized = normalizeXgboostResponse(data);
 
-  if (!isRawXgboostDiagnoseResponse(data)) {
+  if (!normalized) {
     throw new Error("원인 분석 응답 형식이 올바르지 않습니다.");
   }
 
-  return {
-    energyGrade: {
-      annualEmissionTons: data.kpi.annual_emission_tco2,
-    },
-    causeAnalysis: {
-      totalEmissionTons: data.cause_analysis.total_emission_tco2,
-      elecRatioPercent:
-        data.cause_analysis.by_energy_source.electricity.ratio_percent,
-      gasRatioPercent: data.cause_analysis.by_energy_source.gas.ratio_percent,
-      rankedFactors: (data.cause_analysis.ranked_factors ?? []).map((f) => ({
-        factor: f.factor,
-        valuePercent: f.value_percent,
-        rank: f.rank,
-      })),
-      comparisonMetrics: {
-        elecVsAvgPercent:
-          data.cause_analysis.comparison_metrics?.elec_vs_avg_percent ?? 0,
-        gasVsAvgPercent:
-          data.cause_analysis.comparison_metrics?.gas_vs_avg_percent ?? 0,
-        coolingVsAvgPercent:
-          data.cause_analysis.comparison_metrics?.cooling_vs_avg_percent ?? 0,
-      },
-    },
-    averageComparison: {
-      nationalAverageTons: data.average_comparison.national_avg_tco2,
-      industryAverageTons: data.average_comparison.industry_avg_tco2,
-      diffVsNationalPercent: data.average_comparison.diff_vs_national_percent,
-      diffVsIndustryPercent: data.average_comparison.diff_vs_industry_percent,
-      zScore: data.average_comparison.zscore,
-      rankPercentile: data.average_comparison.rank_percentile,
-    },
-    monthlyComparison: data.monthly_comparison
-      ? {
-          electricity: {
-            previousKwh: data.monthly_comparison.electricity.previous_kwh,
-            currentKwh: data.monthly_comparison.electricity.current_kwh,
-            changePercent: data.monthly_comparison.electricity.change_percent,
-          },
-          carbonEmission: {
-            previousTons: data.monthly_comparison.carbon_emission.previous_tco2,
-            currentTons: data.monthly_comparison.carbon_emission.current_tco2,
-            changePercent:
-              data.monthly_comparison.carbon_emission.change_percent,
-          },
-        }
-      : null,
-    trendPrediction: {
-      predictedAnnualTons:
-        data.trend_prediction.keep_current.predicted_annual_tco2,
-    },
-    reductionGoal: {
-      currentAnnualTons: data.reduction_goal.current_annual_tco2,
-      targetAnnualTons: data.reduction_goal.target_annual_tco2,
-      progressPercent: data.reduction_goal.progress_percent,
-    },
-    costSaving: {
-      currentAnnualCostKrw: data.cost_saving.current_annual_cost_krw,
-      expectedAnnualCostKrw: data.cost_saving.expected_annual_cost_krw,
-      expectedSavingKrw: data.cost_saving.expected_saving_krw,
-    },
-    esgScore: {
-      e: {
-        emissionScore: data.esg_score.E.emission_score,
-        energyScore: data.esg_score.E.energy_score,
-        surveyScore: data.esg_score.E.survey_score,
-        finalScore: data.esg_score.E.final_score,
-      },
-      s: data.esg_score.S,
-      g: data.esg_score.G,
-    },
-  };
+  return normalized;
 }
