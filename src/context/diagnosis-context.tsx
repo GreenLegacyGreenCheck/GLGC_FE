@@ -160,7 +160,12 @@ function readPersistedState(): PersistedDiagnosisState | null {
           : null;
       if (
         !Array.isArray(actions) ||
-        (firstAction && !("scenario" in firstAction))
+        (firstAction && !("scenario" in firstAction)) ||
+        (firstAction?.scenario != null &&
+          !(
+            "projectedTonsByDegree" in
+            (firstAction.scenario as Record<string, unknown>)
+          ))
       ) {
         parsed.aiInsight = null;
       }
