@@ -249,22 +249,24 @@ export default function SupportPage() {
 
                   {/* 사업명 */}
                   <div className="px-5 pt-2">
-                    <h3 className="text-base font-black leading-snug">
+                    <h3 className="text-lg font-black leading-snug">
                       {program.title}
                     </h3>
                   </div>
 
-                  {/* 지원 규모 + 기간 */}
-                  <div className="mt-1 flex items-baseline gap-2 px-5">
-                    <span className="text-xl font-black text-[#1ba77d]">
+                  {/* 지원 규모 */}
+                  <div className="mt-1.5 px-5">
+                    <span className="text-sm font-black text-[#e0a23a]">
                       {program.takes || program.carbonSaving}
                     </span>
-                    {program.time ? (
-                      <span className="text-xs font-bold text-[#789b8c]">
-                        · 접수 {program.time}
-                      </span>
-                    ) : null}
                   </div>
+
+                  {/* 접수 기간 */}
+                  {program.time ? (
+                    <p className="mt-0.5 px-5 text-xs font-bold text-[#789b8c]">
+                      접수 {program.time}
+                    </p>
+                  ) : null}
 
                   {/* 태그 */}
                   <div className="mt-3 flex flex-wrap gap-2 px-5">
@@ -292,17 +294,27 @@ export default function SupportPage() {
                     </p>
                   ) : null}
 
-                  {/* 바로가기 버튼 */}
-                  <div className="mt-4 px-5 pb-5">
+                  {/* 버튼 영역 */}
+                  <div className="mt-4 flex flex-col gap-2 px-5 pb-5">
                     <a
                       href={program.link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-1.5 w-full rounded-2xl bg-[#1ba77d] px-5 py-3 text-center text-base font-black text-white"
+                      className="block w-full rounded-2xl bg-[#1ba77d] px-5 py-3 text-center text-base font-black text-white"
                     >
                       지원사업 바로가기
-                      <span aria-hidden="true">→</span>
                     </a>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        alert(
+                          `서류 초안 기능은 준비 중이에요.\n\n필요 서류: ${program.documents || "정보 없음"}`,
+                        );
+                      }}
+                      className="block w-full rounded-2xl border-2 border-[#1ba77d] bg-white px-5 py-3 text-center text-base font-black text-[#1ba77d]"
+                    >
+                      서류 초안 받아보기
+                    </button>
                   </div>
                 </div>
               ))}
