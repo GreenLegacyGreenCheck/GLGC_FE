@@ -4,6 +4,7 @@ import {
   ArrowRightIcon,
   CheckIcon,
   CoinIcon,
+  LightbulbIcon,
   SparkleIcon,
   WarningIcon,
 } from "@/components/icons";
@@ -636,7 +637,8 @@ export default function ReportView({
         {aiActions?.[0]?.scenario ? (
           <div className="mt-3 rounded-xl bg-[#e8f7f0] p-3">
             <p className="text-xs font-black text-[#1ba77d]">
-              💡 {aiActions[0].title} 실행 시 AI 예측
+              <LightbulbIcon className="inline size-4 align-middle" />{" "}
+              {aiActions[0].title} 실행 시 AI 예측
             </p>
             <div className="mt-2 divide-y divide-[#c8ece1]">
               <div className="grid grid-cols-[3rem,1fr] gap-x-3 py-2">
@@ -770,7 +772,8 @@ export default function ReportView({
         {aiActions?.[0]?.scenario?.reductionGoalText ? (
           <div className="mt-3 rounded-xl bg-[#e8f7f0] p-3">
             <p className="text-xs font-black text-[#1ba77d]">
-              💡 {aiActions[0].title} 실행 시 AI 예측
+              <LightbulbIcon className="inline size-4 align-middle" />{" "}
+              {aiActions[0].title} 실행 시 AI 예측
             </p>
             <p className="mt-1 text-xs font-bold text-[#13261f]">
               {aiActions[0].scenario!.reductionGoalText}
@@ -855,7 +858,8 @@ export default function ReportView({
         {aiActions?.[0]?.scenario?.costSavingText ? (
           <div className="mt-3 rounded-xl bg-[#e8f7f0] p-3">
             <p className="text-xs font-black text-[#1ba77d]">
-              💡 {aiActions[0].title} 실행 시 AI 예측
+              <LightbulbIcon className="inline size-4 align-middle" />{" "}
+              {aiActions[0].title} 실행 시 AI 예측
             </p>
             <p className="mt-1 text-xs font-bold text-[#13261f]">
               {aiActions[0].scenario!.costSavingText}

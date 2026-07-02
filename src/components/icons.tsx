@@ -548,3 +548,66 @@ export function ShieldIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+export function PlugIcon({ className }: IconProps) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 20v-6" />
+      <path d="M8 20h8" />
+      <path d="M8 14a4 4 0 0 1 8 0" />
+      <path d="M9 6V3" />
+      <path d="M15 6V3" />
+      <path d="M7 6h10v4a5 5 0 0 1-10 0V6Z" />
+    </svg>
+  );
+}
+
+export function SnowflakeIcon({ className }: IconProps) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 3v18" />
+      <path d="M3 12h18" />
+      <path d="M8.5 7.5 12 4l3.5 3.5" />
+      <path d="M8.5 16.5 12 20l3.5-3.5" />
+      <path d="M7.5 8.5 4 12l3.5 3.5" />
+      <path d="M16.5 8.5 20 12l-3.5 3.5" />
+    </svg>
+  );
+}
+
+export function LayersIcon({ className }: IconProps) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 2 2 7l10 5 10-5-10-5Z" />
+      <path d="M2 12l10 5 10-5" />
+      <path d="M2 17l10 5 10-5" />
+    </svg>
+  );
+}

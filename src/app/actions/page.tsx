@@ -1,8 +1,26 @@
 "use client";
 
 import BottomNavigation from "@/components/BottomNavigation";
-import { SproutIcon } from "@/components/icons";
+import {
+  BoltIcon,
+  FireIcon,
+  LayersIcon,
+  LightbulbIcon,
+  PlugIcon,
+  SnowflakeIcon,
+  SproutIcon,
+} from "@/components/icons";
 import { useDiagnosis } from "@/context/diagnosis-context";
+import type { ComponentType } from "react";
+
+type IconProps = { className?: string };
+const ACTION_ICONS: Record<string, ComponentType<IconProps>> = {
+  LED_LIGHTING: LightbulbIcon,
+  STANDBY_POWER: PlugIcon,
+  HVAC_EFFICIENCY: SnowflakeIcon,
+  INSULATION: LayersIcon,
+  HEATING_EFFICIENCY: FireIcon,
+};
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -146,10 +164,11 @@ export default function ActionsPage() {
                   }`}
                 >
                   <div className="flex items-start gap-3">
-                    <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[#eef8f3] text-2xl">
-                      {action.icon ?? (
-                        <SproutIcon className="size-6 text-[#1ba77d]" />
-                      )}
+                    <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[#eef8f3]">
+                      {(() => {
+                        const Icon = ACTION_ICONS[action.code] ?? SproutIcon;
+                        return <Icon className="size-6 text-[#1ba77d]" />;
+                      })()}
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
