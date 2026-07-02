@@ -113,7 +113,7 @@ export default function ActionsPage() {
   return (
     <>
       <div className="scrollbar-hidden h-screen overflow-y-auto overscroll-contain pb-32 sm:h-full">
-        <header className="flex items-center gap-4 border-b border-[#e5eee9] bg-[#f2faf6] px-5 py-6">
+        <header className="sticky top-0 z-10 flex items-center gap-4 border-b border-[#e5eee9] bg-[#f2faf6] px-5 py-6">
           <Link
             href="/report"
             className="grid size-10 place-items-center rounded-full border border-[#c9eee4] bg-white text-[#13261f]"
@@ -193,9 +193,21 @@ export default function ActionsPage() {
                             <BoltIcon className="size-3" />
                             AI 추천 근거
                           </p>
-                          <p className="mt-1 text-xs font-bold leading-relaxed text-[#0d5f4b]">
-                            {action.reason}
-                          </p>
+                          <ul className="mt-1.5 space-y-1">
+                            {action.reason
+                              .split(/(?<=[.。])\s+|(?<=,)\s+/)
+                              .map((s) => s.trim())
+                              .filter((s) => s.length > 0)
+                              .map((sentence, i) => (
+                                <li
+                                  key={i}
+                                  className="flex items-start gap-1.5 text-xs font-bold leading-snug text-[#0d5f4b]"
+                                >
+                                  <span className="mt-1 size-1.5 shrink-0 rounded-full bg-[#1ba77d]" />
+                                  {sentence.replace(/[.。,]$/, "")}
+                                </li>
+                              ))}
+                          </ul>
                         </div>
                       ) : null}
                       <div className="mt-3 flex flex-wrap gap-2">
