@@ -108,6 +108,9 @@ type DiagnosisState = {
   // Gemini AI 인사이트 전체. XGBoost가 끝난 뒤 /analyzing에서 미리 호출해
   // 여기 저장해두면 /report가 스피너 없이 짠 하고 나타날 수 있다.
   aiInsight: AiInsightResult | null;
+  // 액션별 RAG 정책 결과 캐시. /report에서 aiInsight 확정 후 미리 fetch해
+  // /support 진입 시 즉시 표시할 수 있도록 한다.
+  ragCache: Record<string, { programs: unknown[]; defaultActions: unknown[] }>;
 };
 
 const initialState: DiagnosisState = {
@@ -121,6 +124,7 @@ const initialState: DiagnosisState = {
   esgSurveyAnswers: null,
   xgboostResult: null,
   aiInsight: null,
+  ragCache: {},
 };
 
 // localStorage를 쓰는 이유: 푸시 알림 클릭으로 새 탭이 열릴 때도
@@ -180,6 +184,9 @@ export type DiagnosisContextValue = DiagnosisState & {
   setEsgSurveyAnswers: (answers: EsgSurveyAnswers | null) => void;
   setXgboostResult: (result: XgboostDiagnoseResult | null) => void;
   setAiInsight: (result: AiInsightResult | null) => void;
+  setRagCache: (
+    cache: Record<string, { programs: unknown[]; defaultActions: unknown[] }>,
+  ) => void;
   reset: () => void;
 };
 
@@ -259,6 +266,8 @@ export function DiagnosisProvider({ children }: { children: React.ReactNode }) {
         setState((current) => ({ ...current, xgboostResult })),
       setAiInsight: (aiInsight) =>
         setState((current) => ({ ...current, aiInsight })),
+      setRagCache: (ragCache) =>
+        setState((current) => ({ ...current, ragCache })),
       reset: () => {
         window.localStorage.removeItem(STORAGE_KEY);
         setState(initialState);

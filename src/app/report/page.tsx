@@ -5,7 +5,7 @@ import BottomNavigation from "@/components/BottomNavigation";
 import { RefreshIcon, SproutIcon } from "@/components/icons";
 import { useAuth } from "@/context/auth-context";
 import { useDiagnosis } from "@/context/diagnosis-context";
-import { diagnoseWithXgboost } from "@/lib/diagnosis-api";
+import { diagnoseWithXgboost, getActionPolicy } from "@/lib/diagnosis-api";
 import { getAiInsight } from "@/lib/ai-api";
 import type { AiInsightResult } from "@/context/diagnosis-context";
 import { DUMMY_REPORT } from "@/lib/report-data";
@@ -49,6 +49,8 @@ export default function ReportPage() {
     setXgboostResult: persistXgboostResult,
     aiInsight: persistedAiInsight,
     setAiInsight: persistAiInsight,
+    ragCache,
+    setRagCache,
   } = useDiagnosis();
   const { token } = useAuth();
   const [isDownloading, setIsDownloading] = useState(false);
@@ -147,10 +149,32 @@ export default function ReportPage() {
       // Gemini: xgboostResult가 방금 채워졌거나 있었는데 aiInsight가 없는 경우
       getAiInsight(xgb, result?.recommendedActions ?? [])
         .then((insight) => {
-          if (isMountedRef.current) {
-            setAiInsight(insight);
-            persistAiInsight(insight);
-          }
+          if (!isMountedRef.current) return;
+          setAiInsight(insight);
+          persistAiInsight(insight);
+
+          // aiInsight 확정 즉시 각 액션별 RAG 결과 병렬 pre-fetch
+          if (!result?.diagnosisId) return;
+          const diagnosisId = result.diagnosisId;
+          Promise.allSettled(
+            insight.actions.map((action) =>
+              getActionPolicy(diagnosisId, action.code, action.reason).then(
+                (policy) => ({ code: action.code, policy }),
+              ),
+            ),
+          ).then((settled) => {
+            if (!isMountedRef.current) return;
+            const newCache: Record<
+              string,
+              { programs: unknown[]; defaultActions: unknown[] }
+            > = {};
+            settled.forEach((res) => {
+              if (res.status === "fulfilled") {
+                newCache[res.value.code] = res.value.policy;
+              }
+            });
+            setRagCache({ ...ragCache, ...newCache });
+          });
         })
         .catch(() => {});
     }

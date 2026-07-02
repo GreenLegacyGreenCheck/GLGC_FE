@@ -81,6 +81,7 @@ export function renderWithAuth(
       esgSurveyAnswers: null,
       xgboostResult: null,
       aiInsight: null,
+      ragCache: {},
       isHydrated: true,
       ...diagnosisState,
       setAddress: () => {},
@@ -94,6 +95,7 @@ export function renderWithAuth(
       setXgboostResult: (xgboostResult) =>
         setDiagnosisState((current) => ({ ...current, xgboostResult })),
       setAiInsight: () => {},
+      setRagCache: () => {},
       reset: () => {},
     };
 

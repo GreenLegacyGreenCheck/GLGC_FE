@@ -301,18 +301,6 @@ export default function ReportView({
       (option) => option.degrees === selectedDegrees,
     ) ?? report.simulationOptions[0];
 
-  // Before/After 막대는 둘 중 큰 값을 100%로 기준 삼아 비례 높이로 그린다.
-  const beforeAfterMax = Math.max(
-    report.annualCo2Tons,
-    selectedSimulation.projectedTons,
-  );
-  const beforeHeightPercent =
-    beforeAfterMax > 0 ? (report.annualCo2Tons / beforeAfterMax) * 100 : 100;
-  const afterHeightPercent =
-    beforeAfterMax > 0
-      ? (selectedSimulation.projectedTons / beforeAfterMax) * 100
-      : 100;
-
   return (
     <div ref={ref} className="bg-[#f2faf6]">
       <p className="text-xl font-black">{title}</p>
@@ -667,28 +655,16 @@ export default function ReportView({
           </div>
         ) : null}
 
-        <div className="mt-4 flex gap-2">
-          {report.simulationOptions.map((option) => (
-            <button
-              key={option.degrees}
-              type="button"
-              aria-pressed={selectedDegrees === option.degrees}
-              onClick={() => setSelectedDegrees(option.degrees)}
-              className={`flex-1 rounded-xl px-3 py-2 text-sm font-black ${
-                selectedDegrees === option.degrees
-                  ? "bg-[#1ba77d] text-white"
-                  : "bg-[#eef3f0] text-[#789b8c]"
-              }`}
-            >
-              {option.degrees}도
-            </button>
-          ))}
-        </div>
-
         {(() => {
           const aiScenario = aiActions?.[0]?.scenario;
           const aiProjected = aiScenario?.projectedTons ?? null;
           const aiPct = aiScenario?.percentReduction ?? null;
+          // HVAC·냉난방 관련 액션만 온도 시나리오가 의미 있음
+          const isTemperatureSensitive =
+            !aiProjected ||
+            ["HVAC", "HEATING", "COOLING", "INSULATION"].some((k) =>
+              (aiActions?.[0]?.code ?? "").toUpperCase().includes(k),
+            );
           const afterTons = aiProjected ?? selectedSimulation.projectedTons;
           const pctLabel =
             aiPct != null
@@ -699,6 +675,26 @@ export default function ReportView({
           const aH = Math.round((afterTons / maxTons) * 100);
           return (
             <>
+              {isTemperatureSensitive ? (
+                <div className="mt-4 flex gap-2">
+                  {report.simulationOptions.map((option) => (
+                    <button
+                      key={option.degrees}
+                      type="button"
+                      aria-pressed={selectedDegrees === option.degrees}
+                      onClick={() => setSelectedDegrees(option.degrees)}
+                      className={`flex-1 rounded-xl px-3 py-2 text-sm font-black ${
+                        selectedDegrees === option.degrees
+                          ? "bg-[#1ba77d] text-white"
+                          : "bg-[#eef3f0] text-[#789b8c]"
+                      }`}
+                    >
+                      {option.degrees}도
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+
               <div className="mt-5 flex items-end gap-4">
                 <div className="flex flex-1 flex-col items-center">
                   <div className="flex h-28 w-full max-w-16 items-end">
@@ -853,6 +849,7 @@ export default function ReportView({
         {(() => {
           const sc = aiActions?.[0]?.scenario ?? null;
           const toMan = (won: number) => `${Math.round(won / 10000)}만원`;
+          const currentYear = new Date().getFullYear();
           const hasAiCost =
             sc?.currentAnnualCostWon != null &&
             sc?.projectedAnnualCostWon != null;
@@ -884,7 +881,9 @@ export default function ReportView({
                     )}
                   </div>
                   <p className="mt-1 text-2xl font-black">{currentLabel}</p>
-                  <p className="text-xs font-bold text-[#789b8c]">/ 년</p>
+                  <p className="text-xs font-bold text-[#789b8c]">
+                    {currentYear}년 기준
+                  </p>
                 </div>
                 <div aria-hidden="true" className="h-12 w-px bg-[#d8e7e0]" />
                 <div className="flex-1 text-center">
@@ -901,7 +900,9 @@ export default function ReportView({
                   <p className="mt-1 text-2xl font-black text-[#1ba77d]">
                     {projectedLabel}
                   </p>
-                  <p className="text-xs font-bold text-[#789b8c]">/ 년</p>
+                  <p className="text-xs font-bold text-[#789b8c]">
+                    {currentYear + 1}년 예상
+                  </p>
                 </div>
               </div>
               <div className="mt-4 rounded-2xl bg-[#eef8f3] px-4 py-3">

@@ -76,7 +76,8 @@ function SproutSpinner() {
 export default function SupportPage() {
   const router = useRouter();
   const { token } = useAuth();
-  const { result, isHydrated, selectedActionCodes, aiInsight } = useDiagnosis();
+  const { result, isHydrated, selectedActionCodes, aiInsight, ragCache } =
+    useDiagnosis();
   const isLoggedIn = Boolean(token);
   const [programs, setPrograms] = useState<SupportProgram[]>([]);
   const [defaultActions, setDefaultActions] = useState<
@@ -96,6 +97,30 @@ export default function SupportPage() {
       return;
     }
 
+    // ragCache에 모든 선택 액션 결과가 있으면 바로 사용
+    const allCached = selectedActionCodes.every((code) => code in ragCache);
+    if (allCached) {
+      const cachedResults = selectedActionCodes.map(
+        (code) =>
+          ragCache[code] as { programs: unknown[]; defaultActions: unknown[] },
+      );
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPrograms(cachedResults.flatMap((r) => r.programs) as SupportProgram[]);
+      const seenIds = new Set<number>();
+      const uniqueDefaultActions = (
+        cachedResults.flatMap(
+          (r) => r.defaultActions,
+        ) as DefaultActionSuggestion[]
+      ).filter((action) => {
+        if (seenIds.has(action.id)) return false;
+        seenIds.add(action.id);
+        return true;
+      });
+      setDefaultActions(uniqueDefaultActions);
+      setHasFetched(true);
+      return;
+    }
+
     let isCancelled = false;
 
     Promise.all(
@@ -110,8 +135,6 @@ export default function SupportPage() {
       if (!isCancelled) {
         setPrograms(results.flatMap((result) => result.programs));
 
-        // 같은 default_actions 목록이 선택한 액션마다 똑같이 내려올 수 있어
-        // id 기준으로 중복 제거한다.
         const seenIds = new Set<number>();
         const uniqueDefaultActions = results
           .flatMap((result) => result.defaultActions)
@@ -121,7 +144,6 @@ export default function SupportPage() {
             return true;
           });
         setDefaultActions(uniqueDefaultActions);
-
         setHasFetched(true);
       }
     });
@@ -129,7 +151,7 @@ export default function SupportPage() {
     return () => {
       isCancelled = true;
     };
-  }, [result, selectedActionCodes, aiInsight?.actions]);
+  }, [result, selectedActionCodes, aiInsight?.actions, ragCache]);
 
   if (!result) {
     return null;

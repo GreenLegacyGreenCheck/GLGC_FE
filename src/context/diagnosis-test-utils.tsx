@@ -43,6 +43,7 @@ const defaultState: DiagnosisStateOverrides = {
   esgSurveyAnswers: null,
   xgboostResult: null,
   aiInsight: null,
+  ragCache: {},
   isHydrated: true,
 };
 
@@ -64,6 +65,7 @@ export function renderWithDiagnosis(
       esgSurveyAnswers: null,
       xgboostResult: null,
       aiInsight: null,
+      ragCache: {},
       isHydrated: true,
       ...state,
       setAddress: (address) => setState((current) => ({ ...current, address })),
@@ -94,6 +96,8 @@ export function renderWithDiagnosis(
         setState((current) => ({ ...current, xgboostResult })),
       setAiInsight: (aiInsight) =>
         setState((current) => ({ ...current, aiInsight })),
+      setRagCache: (ragCache) =>
+        setState((current) => ({ ...current, ragCache })),
       reset: () => setState(defaultState),
     };
 

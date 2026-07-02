@@ -82,6 +82,7 @@ const fakeAiInsight = {
     expectedMinKg: number;
     expectedMaxKg: number;
     reason: string;
+    scenario: null;
   }[],
 };
 
@@ -240,10 +241,10 @@ describe("ReportPage", () => {
     expect(screen.getByText("AI 종합 의견")).toBeInTheDocument();
     expect(screen.getAllByText("69%").length).toBeGreaterThan(0);
     expect(screen.getByText("절감 목표")).toBeInTheDocument();
-    expect(screen.getAllByText("2.5t").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("2.50t").length).toBeGreaterThan(0);
     expect(screen.getByText("절감 비용")).toBeInTheDocument();
     expect(screen.getByText("66만원")).toBeInTheDocument();
-    expect(screen.getAllByText("/ 년").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText(/\d{4}년/).length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("연간 약 8만원 절감")).toBeInTheDocument();
   });
 
@@ -483,7 +484,7 @@ describe("ReportPage XGBoost overlay", () => {
     expect(screen.getByText("현재 추세 유지 시")).toBeInTheDocument();
     expect(screen.queryByText("추천 액션 적용 시")).not.toBeInTheDocument();
     expect(screen.getAllByText("1.1t").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("1t").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("1.00t").length).toBeGreaterThan(0);
     expect(screen.getByText("60%")).toBeInTheDocument();
     expect(screen.getByText("50만원")).toBeInTheDocument();
     expect(screen.getByText("40만원")).toBeInTheDocument();
